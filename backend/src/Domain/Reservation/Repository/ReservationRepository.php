@@ -11,6 +11,7 @@ use App\Domain\Reservation\Exception\InsufficientInventoryException;
 use App\Domain\Reservation\Exception\ReservationCancellationConflictException;
 use App\Domain\Reservation\Exception\ReservationNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
@@ -32,9 +33,9 @@ class ReservationRepository extends ServiceEntityRepository
         parent::__construct($registry, Reservation::class);
     }
 
-    public function find(Uuid $id): ?Reservation
+    public function find(mixed $id, LockMode|int|null $lockMode = LockMode::NONE, ?int $lockVersion = null): ?Reservation
     {
-        return $this->getEntityManager()->find(Reservation::class, $id);
+        return parent::find($id, $lockMode, $lockVersion);
     }
 
     /** @return list<Reservation> */

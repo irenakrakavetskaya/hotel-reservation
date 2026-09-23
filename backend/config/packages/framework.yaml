@@ -10,4 +10,4 @@ framework:
         transports:
             scheduler_default: 'sync://'
         routing:
-            'Symfony\Component\Scheduler\Messenger\RunCommandMessage': scheduler_default
+            'Symfony\Component\Console\Messenger\RunCommandMessage': scheduler_default

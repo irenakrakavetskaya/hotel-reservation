@@ -8,6 +8,7 @@ use App\Domain\Reservation\Entity\Reservation;
 use App\Domain\User\Security\AppUserInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
+use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 
 /**
  * Authorization for a single reservation: its own user may view/cancel it,
@@ -27,7 +28,7 @@ final class ReservationVoter extends Voter
             && in_array($attribute, [self::VIEW, self::CANCEL, self::PAY], true);
     }
 
-    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
+    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
     {
         /** @var Reservation $reservation */
         $reservation = $subject;

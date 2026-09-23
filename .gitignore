@@ -1,0 +1,26 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+*.tsbuildinfo
+
+# Backend runtime output
+backend/var/
+backend/vendor/
+
+# IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and local tooling caches
+*.log
+.phpunit.result.cache
+.php-cs-fixer.cache

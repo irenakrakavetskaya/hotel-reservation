@@ -9,7 +9,7 @@ use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule;
 use Symfony\Component\Scheduler\ScheduleProviderInterface;
-use Symfony\Component\Scheduler\Messenger\RunCommandMessage;
+use Symfony\Component\Console\Messenger\RunCommandMessage;
 
 /**
  * Requires `symfony/scheduler` (composer require symfony/scheduler) and a

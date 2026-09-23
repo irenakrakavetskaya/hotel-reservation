@@ -39,6 +39,8 @@ RUN apk add --no-cache \
     && docker-php-ext-enable redis \
     && apk del $PHPIZE_DEPS
 
+COPY --from=composer_deps /usr/bin/composer /usr/bin/composer
+
 # Production opcache/php.ini settings.
 RUN { \
         echo 'opcache.enable=1'; \
@@ -53,6 +55,8 @@ WORKDIR /app
 
 COPY --from=composer_deps /app/vendor ./vendor
 COPY . .
+
+RUN printf 'APP_ENV=prod\nAPP_DEBUG=0\n' > .env
 
 # Generate the autoloader now that app code is present; composer install in
 # stage 1 skipped this because vendor/ was populated before src/ existed.
