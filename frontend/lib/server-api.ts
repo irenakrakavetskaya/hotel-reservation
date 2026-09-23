@@ -5,6 +5,10 @@ async function accessToken(): Promise<string | null> {
   return (await cookies()).get('access_token')?.value ?? null;
 }
 
+export async function getAccessToken(): Promise<string | null> {
+  return accessToken();
+}
+
 export async function getHotels() {
   return hotelApi.list(await accessToken());
 }
@@ -19,4 +23,8 @@ export async function getRoomTypes(hotelId: number) {
 
 export async function getRoomType(hotelId: number, roomTypeId: number) {
   return hotelApi.getRoomType(hotelId, roomTypeId, await accessToken());
+}
+
+export async function getReservations() {
+  return hotelApi.listReservations(await accessToken());
 }

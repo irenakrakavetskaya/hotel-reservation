@@ -45,7 +45,7 @@ final class AvailabilityControllerTest extends WebTestCase
         self::assertSame(6, $payload['minAvailableRooms']);
     }
 
-    public function testItRejectsAnonymousAccess(): void
+    public function testItAllowsAnonymousAvailabilityChecks(): void
     {
         $client = static::createClient();
         ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedAvailabilityScenario();
@@ -55,7 +55,7 @@ final class AvailabilityControllerTest extends WebTestCase
             sprintf('/v1/hotels/%d/room-types/%d/availability?startDate=2026-10-01&endDate=2026-10-03', $hotelId, $roomTypeId),
         );
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseStatusCodeSame(200);
     }
 
     public function testItValidatesQueryString(): void

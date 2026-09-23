@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ApiError } from '../../../../../lib/api';
-import { getHotel, getRoomType } from '../../../../../lib/server-api';
+import { getAccessToken, getHotel, getRoomType } from '../../../../../lib/server-api';
+import BookingForm from './BookingForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,13 +45,13 @@ export default async function RoomTypeDetailPage({ params }: RoomTypePageProps) 
           <p>{roomType.description ?? 'Settle into a thoughtful room with the essentials close at hand.'}</p>
           {roomType.amenities.length > 0 && <ul className="amenity-list">{roomType.amenities.map((amenity) => <li key={amenity}>{amenity}</li>)}</ul>}
         </div>
-        <aside className="booking-panel">
+        <aside className="booking-panel booking-panel--summary">
           <p className="eyebrow">Starting rate</p>
           <strong>{formatPrice(roomType.basePrice)} <span>/ night</span></strong>
           <p>Up to {roomType.maxOccupancy} guests</p>
-          <p className="booking-panel__note">Availability checks and booking are coming next.</p>
         </aside>
       </section>
+      <BookingForm hotel={hotel} roomType={roomType} token={await getAccessToken()} />
     </main>
   );
 }

@@ -29,7 +29,9 @@ public; POST/PUT/DELETE require `ROLE_STAFF`).
 
 Customer booking re-validation is available at
 `GET /v1/hotels/{hotelId}/room-types/{roomTypeId}/availability` with query
-params `startDate`, `endDate`, and optional `roomCount` (default `1`).
+params `startDate`, `endDate`, and optional `roomCount` (default `1`). This
+availability read is public; creating, paying for, and canceling reservations
+still requires an authenticated JWT user.
 
 Redis-backed cache-aside is enabled for hotel/room/room-type GET endpoints,
 availability reads, per-date rates, and per-date inventory availability.

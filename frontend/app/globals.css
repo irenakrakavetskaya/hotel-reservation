@@ -72,9 +72,36 @@ button:hover { background: #0b554e; }
 .room-detail-hero { display: block; }
 .room-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 72px; padding: 48px 0; }
 .booking-panel { align-self: start; display: grid; gap: 16px; padding: 28px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 35px rgba(23, 35, 33, 0.06); }
+.booking-panel--flow { margin: 0 0 72px; }
+.booking-panel--summary { min-height: 210px; }
 .booking-panel strong { font-family: 'Space Grotesk', sans-serif; font-size: 2.2rem; }
 .booking-panel p { margin: 0; color: var(--muted); line-height: 1.5; }
-.booking-panel__note { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.9rem; }
+.booking-form { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 12px; align-items: end; margin-top: 8px; }
+.booking-confirmation, .booking-success { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+.booking-confirmation div { display: grid; gap: 5px; }
+.booking-confirmation strong { font-size: 1.6rem; }
+.booking-confirmation span, .booking-success span { color: var(--muted); }
+.booking-confirmation__label { color: var(--teal) !important; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+.booking-status { justify-content: flex-start; display: grid; gap: 10px; margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+.booking-status--paid { color: var(--teal); }
+.booking-status--rejected { color: #a43e32; }
+.booking-status--canceled { color: var(--muted); }
+.booking-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.button-secondary { min-height: 42px; border: 1px solid var(--line); padding: 0 16px; background: transparent; color: var(--ink); cursor: pointer; font: inherit; font-weight: 700; }
+.button-secondary:hover { border-color: var(--teal); color: var(--teal); background: transparent; }
+.booking-error { margin-top: 18px !important; color: #a43e32 !important; }
+.reservation-grid { display: grid; gap: 16px; padding-bottom: 72px; }
+.reservation-card { display: grid; gap: 22px; padding: 26px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 35px rgba(23, 35, 33, 0.06); }
+.reservation-card__header { display: flex; justify-content: space-between; gap: 18px; align-items: start; }
+.reservation-card h2 { max-width: 680px; margin: 8px 0 0; overflow-wrap: anywhere; font-family: 'Space Grotesk', sans-serif; font-size: 1.15rem; }
+.status-pill { padding: 7px 10px; background: rgba(15, 107, 98, 0.1); color: var(--teal); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; }
+.status-pill--pending { background: rgba(225, 109, 85, 0.12); color: #a34e3c; }
+.status-pill--rejected { background: rgba(164, 62, 50, 0.12); color: #a43e32; }
+.status-pill--canceled { background: rgba(96, 112, 108, 0.12); color: var(--muted); }
+.reservation-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 0; }
+.reservation-details div { display: grid; gap: 6px; }
+.reservation-details dt { color: var(--muted); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+.reservation-details dd { margin: 0; }
 .signal-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; border-top: 1px solid var(--line); padding-top: 26px; }
 .signal-row div { display: grid; gap: 8px; }
 .signal-row span { color: var(--muted); }
@@ -86,4 +113,8 @@ button:hover { background: #0b554e; }
   .search-panel { margin-top: 34px; }
   .detail-hero { display: block; }
   .rating { margin-top: 24px; }
+  .booking-form { grid-template-columns: 1fr; }
+  .booking-confirmation { display: grid; }
+  .reservation-card__header, .reservation-details { grid-template-columns: 1fr; }
+  .reservation-card__header { display: grid; }
 }

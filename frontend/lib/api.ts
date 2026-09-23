@@ -23,6 +23,40 @@ export type RoomType = {
   updatedAt: string;
 };
 
+export type AvailabilityDay = {
+  date: string;
+  totalInventory: number;
+  totalReserved: number;
+  availableRooms: number;
+  price: number | null;
+};
+
+export type Availability = {
+  hotelID: number;
+  roomTypeID: number;
+  startDate: string;
+  endDate: string;
+  roomCount: number;
+  nights: number;
+  canBook: boolean;
+  totalPrice: number | null;
+  minAvailableRooms: number;
+  days: AvailabilityDay[];
+};
+
+export type Reservation = {
+  reservationId: string;
+  hotelID: number;
+  roomTypeID: number;
+  startDate: string;
+  endDate: string;
+  roomCount: number;
+  status: string;
+  totalPrice: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -104,5 +138,42 @@ export const hotelApi = {
   },
   getRoomType(hotelId: number, roomTypeId: number, token?: string | null) {
     return apiFetch<RoomType>(`/hotels/${hotelId}/room-types/${roomTypeId}`, { token, next: { revalidate: 60 } });
+  },
+  availability(hotelId: number, roomTypeId: number, startDate: string, endDate: string, roomCount: number, token?: string | null) {
+    const query = new URLSearchParams({ startDate, endDate, roomCount: String(roomCount) });
+    return apiFetch<Availability>(`/hotels/${hotelId}/room-types/${roomTypeId}/availability?${query}`, {
+      token,
+      cache: 'no-store',
+    });
+  },
+  createReservation(input: {
+    reservationID: string;
+    hotelID: number;
+    roomTypeID: number;
+    startDate: string;
+    endDate: string;
+    roomCount: number;
+  }, token?: string | null) {
+    return apiFetch<Reservation>('/reservations', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(input),
+    });
+  },
+  listReservations(token?: string | null) {
+    return apiFetch<Reservation[]>('/reservations', { token, cache: 'no-store' });
+  },
+  payReservation(reservationId: string, approved: boolean, token?: string | null) {
+    return apiFetch<Reservation>('/payments', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reservationID: reservationId, approved }),
+    });
+  },
+  cancelReservation(reservationId: string, token?: string | null) {
+    return apiFetch<Reservation>(`/reservations/${reservationId}`, {
+      method: 'DELETE',
+      token,
+    });
   },
 };
