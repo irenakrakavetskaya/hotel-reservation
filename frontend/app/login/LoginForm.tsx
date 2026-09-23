@@ -26,6 +26,7 @@ export default function LoginForm() {
         setError(typeof payload === 'object' && payload !== null && 'error' in payload && typeof payload.error === 'string' ? payload.error : 'Login failed.');
         return;
       }
+      router.refresh();
       router.push('/reservations');
     } catch {
       setError('Login failed. Please try again.');

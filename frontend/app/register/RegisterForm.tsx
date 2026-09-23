@@ -27,6 +27,7 @@ export default function RegisterForm() {
         setError(getError(payload, response.status));
         return;
       }
+      router.refresh();
       router.push('/reservations');
     } catch {
       setError('Registration failed. Please try again.');
