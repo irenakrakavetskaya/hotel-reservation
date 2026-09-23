@@ -17,8 +17,13 @@ are `demo@example.com` / `demo-password` and `staff@example.com` /
 `staff-password`.
 
 The API uses `POST /v1/auth/login` with JSON fields `email` and `password`.
-Users must be provisioned through a trusted administrative process until the
-separate registration/onboarding flow is designed.
+Public registration is available at `POST /v1/auth/register` with JSON fields
+`email`, `password`, and `passwordConfirmation`. Passwords must be 8-255
+characters, and registration always assigns `ROLE_USER`. Staff/admin accounts
+remain trusted-provisioned.
+
+The Next.js frontend stores the returned JWT in an HttpOnly, SameSite=Lax
+cookie. Set `AUTH_COOKIE_SECURE=false` for local HTTP and `true` for HTTPS.
 
 Mock payment settlement is available at `POST /v1/payments` with body fields
 `reservationID` (UUID) and `approved` (boolean). It updates reservation status
@@ -32,6 +37,13 @@ Customer booking re-validation is available at
 params `startDate`, `endDate`, and optional `roomCount` (default `1`). This
 availability read is public; creating, paying for, and canceling reservations
 still requires an authenticated JWT user.
+
+The availability endpoint itself is public, so anonymous users can check dates
+and prices. Reservation creation uses the client-supplied `reservationID` UUID
+and requires an authenticated user. The frontend preserves that UUID across
+retries. Reservation history is available at `GET /v1/reservations`; payment
+settlement uses `POST /v1/payments`; cancellation uses
+`DELETE /v1/reservations/{id}`.
 
 Redis-backed cache-aside is enabled for hotel/room/room-type GET endpoints,
 availability reads, per-date rates, and per-date inventory availability.

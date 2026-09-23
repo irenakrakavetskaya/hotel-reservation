@@ -57,6 +57,17 @@ export type Reservation = {
   updatedAt: string;
 };
 
+export type AuthUser = {
+  id: number;
+  email: string;
+  roles: string[];
+};
+
+export type AuthResponse = {
+  token: string;
+  user?: AuthUser;
+};
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -174,6 +185,21 @@ export const hotelApi = {
     return apiFetch<Reservation>(`/reservations/${reservationId}`, {
       method: 'DELETE',
       token,
+    });
+  },
+};
+
+export const authApi = {
+  register(email: string, password: string, passwordConfirmation: string) {
+    return apiFetch<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, passwordConfirmation }),
+    });
+  },
+  login(email: string, password: string) {
+    return apiFetch<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
   },
 };

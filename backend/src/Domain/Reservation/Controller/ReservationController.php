@@ -12,13 +12,14 @@ use App\Domain\Reservation\Service\ReservationService;
 use App\Domain\User\Security\AppUserInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * Reservation-related APIs from docs/IMPLEMENTATION_PLAN.md §2.
@@ -34,6 +35,7 @@ final class ReservationController extends AbstractController
 {
     public function __construct(
         private readonly ReservationService $reservationService,
+        private readonly ValidatorInterface $validator,
     ) {
     }
 
@@ -76,9 +78,10 @@ final class ReservationController extends AbstractController
     #[Route('', name: 'reservation_create', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     public function create(
-        #[MapRequestPayload] CreateReservationRequest $request,
+        Request $httpRequest,
         #[CurrentUser] AppUserInterface $user,
     ): JsonResponse {
+        $request = $this->parseCreateRequest($httpRequest);
         $reservation = $this->reservationService->createReservation($request, $user->getId());
         $this->denyAccessUnlessGranted(ReservationVoter::VIEW, $reservation);
 
@@ -115,5 +118,29 @@ final class ReservationController extends AbstractController
         }
 
         return Uuid::fromString($id);
+    }
+
+    private function parseCreateRequest(Request $httpRequest): CreateReservationRequest
+    {
+        try {
+            $payload = $httpRequest->toArray();
+        } catch (\Throwable) {
+            throw new UnprocessableEntityHttpException('Request body must be valid JSON.');
+        }
+
+        $request = new CreateReservationRequest();
+        $request->reservationId = is_string($payload['reservationID'] ?? null) ? $payload['reservationID'] : '';
+        $request->hotelId = is_int($payload['hotelID'] ?? null) ? $payload['hotelID'] : 0;
+        $request->roomTypeId = is_int($payload['roomTypeID'] ?? null) ? $payload['roomTypeID'] : 0;
+        $request->startDate = is_string($payload['startDate'] ?? null) ? $payload['startDate'] : '';
+        $request->endDate = is_string($payload['endDate'] ?? null) ? $payload['endDate'] : '';
+        $request->roomCount = is_int($payload['roomCount'] ?? null) ? $payload['roomCount'] : 0;
+
+        $violations = $this->validator->validate($request);
+        if (count($violations) > 0) {
+            throw new UnprocessableEntityHttpException((string) $violations);
+        }
+
+        return $request;
     }
 }

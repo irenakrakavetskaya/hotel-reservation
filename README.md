@@ -46,6 +46,14 @@ The HTTP port can be changed without editing the Compose file:
 HTTP_PORT=8091 docker compose -f docker/docker-compose.yml up
 ```
 
+For local HTTP development, keep the auth cookie non-secure:
+
+```bash
+AUTH_COOKIE_SECURE=false docker compose -f docker/docker-compose.yml up
+```
+
+Set `AUTH_COOKIE_SECURE=true` when serving the frontend over HTTPS.
+
 ## Database Setup
 
 After the backend is running, apply migrations:
@@ -106,7 +114,11 @@ Generate local JWT keys when using the backend outside Docker:
 php bin/console lexik:jwt:generate-keypair
 ```
 
-Users are provisioned through a trusted administrative process. Authentication uses `POST /v1/auth/login` with `email` and `password`.
+Authentication is available through `POST /v1/auth/login` with `email` and
+`password`. Public registration is available through
+`POST /v1/auth/register` with `email`, `password`, and
+`passwordConfirmation`. Self-registration always creates `ROLE_USER`; staff
+and admin roles remain trusted-provisioned.
 
 ## Frontend Development
 
@@ -124,6 +136,17 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+The frontend includes these user flows:
+
+- `/hotels` and hotel/room-type detail pages
+- `/hotels/{hotelId}/room-types/{roomTypeId}/availability` for public availability checks
+- `/register` and `/login`
+- `/reservations` for authenticated history, payment, and cancellation states
+
+JWTs are never stored in browser local storage. Next.js route handlers keep the
+JWT in an HttpOnly, SameSite=Lax cookie and redirect successful auth to
+`/reservations`.
 
 ## Important Invariants
 

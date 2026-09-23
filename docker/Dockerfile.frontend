@@ -24,6 +24,8 @@ COPY . .
 # still use NEXT_PUBLIC_API_URL from the environment, set in docker-compose.
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG AUTH_COOKIE_SECURE=false
+ENV AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE}
 RUN npm run build
 
 # ---------- Stage 3: runtime ----------

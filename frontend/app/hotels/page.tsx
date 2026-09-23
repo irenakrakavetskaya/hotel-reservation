@@ -34,10 +34,6 @@ export default async function HotelsPage() {
 
   return (
     <main className="page-shell page-shell--compact">
-      <nav className="topbar" aria-label="Primary navigation">
-        <Link className="brand" href="/">Hotel Reserve</Link>
-        <span className="topbar__context">Browse stays</span>
-      </nav>
       <header className="page-heading">
         <p className="eyebrow">Find your next address</p>
         <h1>Hotels with a little more character.</h1>
@@ -60,7 +56,6 @@ export default async function HotelsPage() {
 function ApiErrorState({ title, message }: { title: string; message: string }) {
   return (
     <main className="page-shell page-shell--compact">
-      <nav className="topbar" aria-label="Primary navigation"><Link className="brand" href="/">Hotel Reserve</Link></nav>
       <section className="error-state"><p className="eyebrow">Connection issue</p><h1>{title}</h1><p>{message}</p><Link href="/hotels">Try again</Link></section>
     </main>
   );

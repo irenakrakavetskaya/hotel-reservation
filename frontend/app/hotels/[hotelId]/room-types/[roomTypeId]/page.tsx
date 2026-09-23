@@ -31,10 +31,6 @@ export default async function RoomTypeDetailPage({ params }: RoomTypePageProps) 
 
   return (
     <main className="page-shell page-shell--compact">
-      <nav className="topbar" aria-label="Primary navigation">
-        <Link className="brand" href="/">Hotel Reserve</Link>
-        <Link href={`/hotels/${hotel.id}`}>{hotel.name}</Link>
-      </nav>
       <header className="room-detail-hero">
         <p className="eyebrow">{hotel.city}, {hotel.country}</p>
         <h1>{roomType.name}</h1>

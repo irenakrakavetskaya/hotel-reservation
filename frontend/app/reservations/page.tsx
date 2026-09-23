@@ -19,7 +19,6 @@ export default async function ReservationsPage() {
 
   return (
     <main className="page-shell page-shell--compact">
-      <nav className="topbar" aria-label="Primary navigation"><Link className="brand" href="/">Hotel Reserve</Link><Link href="/hotels">Browse hotels</Link></nav>
       <header className="page-heading"><p className="eyebrow">Your stays</p><h1>Keep every arrival in view.</h1><p className="intro">Review reservation status, payment state, and cancellation options.</p></header>
       {reservations.length > 0 ? <section className="reservation-grid" aria-label="Reservation history">{reservations.map((reservation) => <ReservationCard key={reservation.reservationId} initialReservation={reservation} token={token} />)}</section> : <section className="empty-state"><h2>No reservations yet.</h2><p>Your confirmed stays will appear here.</p><Link href="/hotels">Find a hotel <span aria-hidden="true">-&gt;</span></Link></section>}
     </main>

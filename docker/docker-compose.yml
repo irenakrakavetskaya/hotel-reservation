@@ -33,9 +33,11 @@ services:
       dockerfile: ../docker/Dockerfile.frontend
       args:
         NEXT_PUBLIC_API_URL: http://localhost:${HTTP_PORT:-8090}/v1
+        AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:${HTTP_PORT:-8090}/v1
       API_SERVER_URL: http://nginx/v1
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
 
   scheduler:
     image: docker_scheduler

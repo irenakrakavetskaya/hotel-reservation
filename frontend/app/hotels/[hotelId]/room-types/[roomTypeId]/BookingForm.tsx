@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { ApiError, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
 
 type BookingFormProps = {
@@ -10,6 +11,7 @@ type BookingFormProps = {
   initialStartDate?: string;
   initialEndDate?: string;
   initialRoomCount?: number;
+  initialAvailability?: Availability | null;
 };
 
 function dateAfter(days: number): string {
@@ -23,11 +25,11 @@ function formatPrice(priceInCents: number | null): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(priceInCents / 100);
 }
 
-export default function BookingForm({ hotel, roomType, token, initialStartDate, initialEndDate, initialRoomCount }: BookingFormProps) {
+export default function BookingForm({ hotel, roomType, token, initialStartDate, initialEndDate, initialRoomCount, initialAvailability }: BookingFormProps) {
   const [startDate, setStartDate] = useState(initialStartDate ?? dateAfter(7));
   const [endDate, setEndDate] = useState(initialEndDate ?? dateAfter(9));
   const [roomCount, setRoomCount] = useState(initialRoomCount ?? 1);
-  const [availability, setAvailability] = useState<Availability | null>(null);
+  const [availability, setAvailability] = useState<Availability | null>(initialAvailability ?? null);
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [reservationId, setReservationId] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -128,7 +130,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
       {availability?.canBook && !reservation && (
         <div className="booking-confirmation">
           <div><span className="booking-confirmation__label">Available for your stay</span><strong>{formatPrice(availability.totalPrice)}</strong><span>{availability.nights} nights · {roomCount} room{roomCount === 1 ? '' : 's'}</span></div>
-          <button type="button" onClick={createReservation} disabled={isBooking || !reservationId}>{isBooking ? 'Booking...' : 'Book this stay'}</button>
+          {token ? <button type="button" onClick={createReservation} disabled={isBooking || !reservationId}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <Link className="button-link" href="/login">Sign in to book <span aria-hidden="true">-&gt;</span></Link>}
         </div>
       )}
       {reservation && (

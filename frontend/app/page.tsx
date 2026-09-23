@@ -3,11 +3,6 @@ import Link from 'next/link';
 export default function HomePage() {
   return (
     <main className="page-shell">
-      <nav className="topbar" aria-label="Primary navigation">
-        <span className="brand">Hotel Reserve</span>
-        <Link href="/hotels">Browse hotels</Link>
-      </nav>
-
       <section className="hero" id="search">
         <p className="eyebrow">A better way to arrive</p>
         <h1>Make room for the good part.</h1>

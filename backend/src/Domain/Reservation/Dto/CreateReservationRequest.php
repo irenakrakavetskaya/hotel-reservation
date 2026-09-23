@@ -28,15 +28,13 @@ final class CreateReservationRequest
     #[SerializedName('reservationID')]
     public string $reservationId;
 
-    #[Assert\NotBlank]
-    #[Assert\Regex(pattern: '/^\d+$/', message: 'hotelID must be numeric.')]
+    #[Assert\Positive]
     #[SerializedName('hotelID')]
-    public string $hotelId;
+    public int $hotelId;
 
-    #[Assert\NotBlank]
-    #[Assert\Regex(pattern: '/^\d+$/', message: 'roomTypeID must be numeric.')]
+    #[Assert\Positive]
     #[SerializedName('roomTypeID')]
-    public string $roomTypeId;
+    public int $roomTypeId;
 
     #[Assert\NotBlank]
     #[Assert\Date]
@@ -46,23 +44,22 @@ final class CreateReservationRequest
     #[Assert\Date]
     public string $endDate;
 
-    #[Assert\NotBlank]
-    #[Assert\Regex(pattern: '/^[1-9]\d*$/', message: 'roomCount must be a positive integer.')]
-    public string $roomCount;
+    #[Assert\Positive]
+    public int $roomCount;
 
     public function getHotelId(): int
     {
-        return (int) $this->hotelId;
+        return $this->hotelId;
     }
 
     public function getRoomTypeId(): int
     {
-        return (int) $this->roomTypeId;
+        return $this->roomTypeId;
     }
 
     public function getRoomCount(): int
     {
-        return (int) $this->roomCount;
+        return $this->roomCount;
     }
 
     public function getStartDate(): \DateTimeImmutable

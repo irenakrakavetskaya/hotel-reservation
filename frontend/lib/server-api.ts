@@ -25,6 +25,10 @@ export async function getRoomType(hotelId: number, roomTypeId: number) {
   return hotelApi.getRoomType(hotelId, roomTypeId, await accessToken());
 }
 
+export async function getAvailability(hotelId: number, roomTypeId: number, startDate: string, endDate: string, roomCount: number) {
+  return hotelApi.availability(hotelId, roomTypeId, startDate, endDate, roomCount);
+}
+
 export async function getReservations() {
   return hotelApi.listReservations(await accessToken());
 }

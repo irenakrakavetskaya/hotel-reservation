@@ -44,10 +44,6 @@ export default async function HotelDetailPage({ params }: HotelPageProps) {
 
   return (
     <main className="page-shell page-shell--compact">
-      <nav className="topbar" aria-label="Primary navigation">
-        <Link className="brand" href="/">Hotel Reserve</Link>
-        <Link href="/hotels">All hotels</Link>
-      </nav>
       <header className="detail-hero">
         <div>
           <p className="eyebrow">{hotel.city}, {hotel.country}</p>

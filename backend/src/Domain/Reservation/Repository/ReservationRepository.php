@@ -84,7 +84,7 @@ class ReservationRepository extends ServiceEntityRepository
                     INSERT INTO reservation
                         (id, user_id, hotel_id, room_type_id, start_date, end_date, room_count, status, total_price, created_at, updated_at)
                     VALUES
-                        (:id, :userId, :hotelId, :roomTypeId, :startDate, :endDate, :roomCount, :status, :totalPrice, now(), now())
+                        (:id, :userId, :hotelId, :roomTypeId, :startDate, :endDate, :roomCount, :status, :totalPrice, CURRENT_TIMESTAMP(0), CURRENT_TIMESTAMP(0))
                     ON CONFLICT (id) DO NOTHING
                     SQL,
                 [
@@ -198,7 +198,7 @@ class ReservationRepository extends ServiceEntityRepository
 
             if (ReservationStatus::Canceled->value !== $row['status']) {
                 $conn->executeStatement(
-                    'UPDATE reservation SET status = :status, updated_at = now() WHERE id = :id',
+                    'UPDATE reservation SET status = :status, updated_at = CURRENT_TIMESTAMP(0) WHERE id = :id',
                     ['status' => ReservationStatus::Canceled->value, 'id' => $id->toRfc4122()],
                 );
 
@@ -296,7 +296,7 @@ class ReservationRepository extends ServiceEntityRepository
 
             if (ReservationStatus::Pending === $currentStatus) {
                 $conn->executeStatement(
-                    'UPDATE reservation SET status = :status, updated_at = now() WHERE id = :id',
+                    'UPDATE reservation SET status = :status, updated_at = CURRENT_TIMESTAMP(0) WHERE id = :id',
                     ['status' => $requestedStatus->value, 'id' => $id->toRfc4122()],
                 );
             } elseif ($currentStatus !== $requestedStatus) {
