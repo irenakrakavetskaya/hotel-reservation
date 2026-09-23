@@ -10,6 +10,12 @@
 5. Run `php bin/console app:inventory:prepopulate --backfill`, then
    `php bin/console app:rates:recompute`.
 
+For deterministic local data, run `php bin/console app:demo:seed`. This creates
+demo customer and staff users, hotels, room types, rooms, inventory, and rates.
+The command is idempotent and does not delete existing records. Demo credentials
+are `demo@example.com` / `demo-password` and `staff@example.com` /
+`staff-password`.
+
 The API uses `POST /v1/auth/login` with JSON fields `email` and `password`.
 Users must be provisioned through a trusted administrative process until the
 separate registration/onboarding flow is designed.

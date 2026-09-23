@@ -65,6 +65,25 @@ docker compose -f docker/docker-compose.yml exec backend \
   php bin/console app:rates:recompute
 ```
 
+Seed deterministic demo data (safe to run repeatedly):
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend \
+  php bin/console app:demo:seed
+```
+
+Demo credentials:
+
+- Customer: `demo@example.com` / `demo-password`
+- Staff: `staff@example.com` / `staff-password`
+
+Generate JWT keys before testing login:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend \
+  php bin/console lexik:jwt:generate-keypair
+```
+
 Stop the stack with:
 
 ```bash

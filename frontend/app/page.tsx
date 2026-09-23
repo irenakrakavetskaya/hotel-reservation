@@ -1,9 +1,11 @@
+import Link from 'next/link';
+
 export default function HomePage() {
   return (
     <main className="page-shell">
       <nav className="topbar" aria-label="Primary navigation">
         <span className="brand">Hotel Reserve</span>
-        <a href="#search">Find a stay</a>
+        <Link href="/hotels">Browse hotels</Link>
       </nav>
 
       <section className="hero" id="search">
@@ -25,7 +27,7 @@ export default function HomePage() {
             Check-out
             <input name="checkOut" type="date" />
           </label>
-          <button type="submit">Search stays</button>
+          <Link className="button-link" href="/hotels">Search stays <span aria-hidden="true">-&gt;</span></Link>
         </form>
       </section>
 
