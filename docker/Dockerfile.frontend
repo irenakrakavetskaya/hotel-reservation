@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+#
+# Frontend image — Next.js 16, built with the `standalone` output mode so the
+# runtime image only needs the compiled server, not the full node_modules
+# tree or the Next.js CLI.
+#
+# Requires `output: 'standalone'` in next.config.js/ts.
+
+ARG NODE_VERSION=20
+
+# ---------- Stage 1: dependencies ----------
+FROM node:${NODE_VERSION}-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# ---------- Stage 2: build ----------
+FROM node:${NODE_VERSION}-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Build-time API URL — the value baked in here is only used for anything
+# Next resolves at build time (e.g. static generation); runtime requests
+# still use NEXT_PUBLIC_API_URL from the environment, set in docker-compose.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+RUN npm run build
+
+# ---------- Stage 3: runtime ----------
+FROM node:${NODE_VERSION}-alpine AS runtime
+WORKDIR /app
+
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["node", "server.js"]

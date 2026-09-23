@@ -1,0 +1,13 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    http_method_override: false
+    handle_all_throwables: true
+    serializer:
+        enabled: true
+    validation:
+        email_validation_mode: html5
+    messenger:
+        transports:
+            scheduler_default: 'sync://'
+        routing:
+            'Symfony\Component\Scheduler\Messenger\RunCommandMessage': scheduler_default

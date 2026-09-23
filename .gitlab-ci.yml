@@ -1,0 +1,159 @@
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+variables:
+  BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend
+  FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend
+  POSTGRES_DB: hotel_reservations_test
+  POSTGRES_USER: hotel
+  POSTGRES_PASSWORD: hotel
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+default:
+  interruptible: true
+
+# ============================== lint ==============================
+
+lint:backend:
+  stage: lint
+  image: composer:2
+  cache:
+    key: composer-$CI_COMMIT_REF_SLUG
+    paths:
+      - backend/vendor
+  script:
+    - cd backend
+    - composer install --no-interaction --prefer-dist
+    - vendor/bin/php-cs-fixer fix --dry-run --diff
+    - vendor/bin/phpstan analyse
+  rules:
+    - changes:
+        - backend/**/*
+
+lint:frontend:
+  stage: lint
+  image: node:20-alpine
+  cache:
+    key: npm-$CI_COMMIT_REF_SLUG
+    paths:
+      - frontend/node_modules
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+    - npx tsc --noEmit
+  rules:
+    - changes:
+        - frontend/**/*
+
+# ============================== test ==============================
+
+# The concurrency test (docs/IMPLEMENTATION_PLAN.md §9) runs here as part of
+# the normal PHPUnit suite — it needs a real Postgres to exercise the
+# check_room_count constraint, which is why this job has a Postgres service
+# rather than mocking the database.
+test:backend:
+  stage: test
+  image: composer:2
+  services:
+    - name: postgres:18-alpine
+      alias: postgres
+    - name: redis:7-alpine
+      alias: redis
+  variables:
+    APP_ENV: test
+    DATABASE_URL: "postgresql://hotel:hotel@postgres:5432/hotel_reservations_test?serverVersion=18&charset=utf8"
+    REDIS_URL: "redis://redis:6379"
+  cache:
+    key: composer-$CI_COMMIT_REF_SLUG
+    paths:
+      - backend/vendor
+  script:
+    - cd backend
+    - composer install --no-interaction --prefer-dist
+    - php bin/console doctrine:migrations:migrate --no-interaction --env=test
+    - vendor/bin/phpunit --testdox --log-junit var/test-results/junit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: backend/var/test-results/junit.xml
+
+test:frontend:
+  stage: test
+  image: node:20-alpine
+  cache:
+    key: npm-$CI_COMMIT_REF_SLUG
+    paths:
+      - frontend/node_modules
+  script:
+    - cd frontend
+    - npm ci
+    - npm test -- --ci
+
+# ============================== build ==============================
+# Builds run only on the default branch or on tags — feature branches stop
+# at test. Images are tagged with the short commit SHA (traceable, immutable)
+# and floated onto `latest` for convenience.
+
+.build_template:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+build:backend:
+  extends: .build_template
+  script:
+    - docker build -f docker/Dockerfile.backend -t "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" backend
+    - docker push "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker tag "$BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA" "$BACKEND_IMAGE:latest"
+    - docker push "$BACKEND_IMAGE:latest"
+
+build:frontend:
+  extends: .build_template
+  script:
+    - >
+      docker build -f docker/Dockerfile.frontend
+      --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL"
+      -t "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA" frontend
+    - docker push "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker tag "$FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA" "$FRONTEND_IMAGE:latest"
+    - docker push "$FRONTEND_IMAGE:latest"
+
+# ============================== deploy ==============================
+# Placeholder deploy scripts — this project's actual deploy target
+# (Kubernetes, a plain VM with docker compose, etc.) isn't specified yet.
+# Replace the `script:` blocks below with the real mechanism; everything
+# else (stage gating, environments, image tags to pull) is ready to use.
+
+deploy:staging:
+  stage: deploy
+  image: alpine:3.20
+  environment:
+    name: staging
+    url: https://staging.example.com
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  script:
+    - echo "TODO: pull and deploy $BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA and $FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA to staging"
+
+deploy:production:
+  stage: deploy
+  image: alpine:3.20
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - echo "TODO: pull and deploy $BACKEND_IMAGE:$CI_COMMIT_SHORT_SHA and $FRONTEND_IMAGE:$CI_COMMIT_SHORT_SHA to production"

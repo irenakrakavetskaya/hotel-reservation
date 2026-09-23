@@ -1,0 +1,26 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        # Registers Symfony's Uuid as a native Doctrine DBAL type, mapped to
+        # Postgres' `uuid` column type. Required for the Reservation entity's
+        # `id` property (Symfony\Component\Uid\Uuid) to hydrate/persist
+        # correctly — without this, Doctrine falls back to some other
+        # string-ish representation.
+        types:
+            uuid: Symfony\Bridge\Doctrine\Types\UuidType
+        mapping_types:
+            uuid: uuid
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: true
+        mappings:
+            App:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Domain'
+                prefix: 'App\Domain'
+                alias: App

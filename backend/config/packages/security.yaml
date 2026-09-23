@@ -1,0 +1,31 @@
+security:
+    password_hashers:
+        App\Domain\User\Entity\User: 'auto'
+
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Domain\User\Entity\User
+                property: email
+
+    firewalls:
+        auth_login:
+            pattern: ^/v1/auth/login$
+            stateless: true
+            provider: app_user_provider
+            json_login:
+                check_path: auth_login
+                username_path: email
+                password_path: password
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+        api:
+            pattern: ^/v1
+            stateless: true
+            provider: app_user_provider
+            jwt: ~
+
+    access_control:
+        - { path: ^/v1/auth/login$, roles: PUBLIC_ACCESS, methods: [POST] }
+        - { path: ^/v1/hotels, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/v1, roles: ROLE_USER }

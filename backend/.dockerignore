@@ -1,0 +1,12 @@
+var/
+vendor/
+.env
+.env.local
+.env.*.local
+node_modules/
+.git/
+.gitignore
+docker/
+tests/
+.php-cs-fixer.cache
+phpunit.xml

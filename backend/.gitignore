@@ -1,0 +1,4 @@
+/.env.local
+/config/jwt/*.pem
+/var/
+/vendor/
