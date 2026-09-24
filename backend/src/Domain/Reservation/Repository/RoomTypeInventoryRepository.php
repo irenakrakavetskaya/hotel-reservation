@@ -212,6 +212,6 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
 
     private function buildAvailabilityKey(int $hotelId, int $roomTypeId, string $date): string
     {
-        return sprintf('inventory:%d:%d:%s:available', $hotelId, $roomTypeId, $date);
+        return sprintf('inventory.%d.%d.%s.available', $hotelId, $roomTypeId, $date);
     }
 }

@@ -8,16 +8,19 @@ use App\Domain\User\Entity\User;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Uid\Uuid;
 
 final class PaymentControllerTest extends WebTestCase
 {
+    private KernelBrowser $client;
+
     protected function setUp(): void
     {
         self::ensureKernelShutdown();
-        self::bootKernel();
+        $this->client = static::createClient();
 
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
@@ -26,7 +29,7 @@ final class PaymentControllerTest extends WebTestCase
 
     public function testItProcessesApprovedPaymentForPendingReservation(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token, 'userId' => $userId] = $this->createAuthenticatedUser('buyer@example.com');
         $reservationId = $this->seedPendingReservation($userId);
 
@@ -45,7 +48,7 @@ final class PaymentControllerTest extends WebTestCase
 
     public function testItRequiresAuthentication(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
 
         $client->request(
             'POST',
@@ -58,7 +61,7 @@ final class PaymentControllerTest extends WebTestCase
 
     public function testItValidatesRequestPayload(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('buyer2@example.com');
 
         $client->request(
@@ -126,7 +129,7 @@ final class PaymentControllerTest extends WebTestCase
                 INSERT INTO reservation
                     (id, user_id, hotel_id, room_type_id, start_date, end_date, room_count, status, total_price, created_at, updated_at)
                 VALUES
-                    (:id, :userId, :hotelId, :roomTypeId, :startDate, :endDate, 1, 'pending', 10000, now(), now())
+                    (:id, :userId, :hotelId, :roomTypeId, :startDate, :endDate, 1, 'pending', 10000, CURRENT_TIMESTAMP(0), CURRENT_TIMESTAMP(0))
                 SQL,
             [
                 'id' => $reservationId,

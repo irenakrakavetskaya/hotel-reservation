@@ -29,7 +29,7 @@ final class Version20260101000004 extends AbstractMigration
                 room_type_id BIGINT NOT NULL,
                 date DATE NOT NULL,
                 price INTEGER NOT NULL CHECK (price >= 0),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
                 PRIMARY KEY (hotel_id, room_type_id, date),
                 CONSTRAINT fk_room_type_rate_hotel
                     FOREIGN KEY (hotel_id) REFERENCES hotel (id) ON DELETE CASCADE,

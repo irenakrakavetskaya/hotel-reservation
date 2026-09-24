@@ -13,16 +13,16 @@ final class CacheScopes
 
     public static function roomRead(int $hotelId): string
     {
-        return sprintf('room-read:%d', $hotelId);
+        return sprintf('room-read.%d', $hotelId);
     }
 
     public static function roomTypeRead(int $hotelId): string
     {
-        return sprintf('room-type-read:%d', $hotelId);
+        return sprintf('room-type-read.%d', $hotelId);
     }
 
     public static function availabilityRead(int $hotelId, int $roomTypeId): string
     {
-        return sprintf('availability-read:%d:%d', $hotelId, $roomTypeId);
+        return sprintf('availability-read.%d.%d', $hotelId, $roomTypeId);
     }
 }

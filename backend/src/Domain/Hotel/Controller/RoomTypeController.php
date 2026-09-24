@@ -39,7 +39,7 @@ final class RoomTypeController extends AbstractController
     public function list(int $hotelId): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::roomTypeRead($hotelId));
-        $cacheKey = sprintf('room-type:list:%d:v%d', $hotelId, $scopeVersion);
+        $cacheKey = sprintf('room-type.list.%d.v%d', $hotelId, $scopeVersion);
         $cacheItem = $this->cache->getItem($cacheKey);
 
         if ($cacheItem->isHit() && is_array($cacheItem->get())) {
@@ -60,7 +60,7 @@ final class RoomTypeController extends AbstractController
     public function get(int $hotelId, int $id): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::roomTypeRead($hotelId));
-        $cacheKey = sprintf('room-type:get:%d:%d:v%d', $hotelId, $id, $scopeVersion);
+        $cacheKey = sprintf('room-type.get.%d.%d.v%d', $hotelId, $id, $scopeVersion);
         $cacheItem = $this->cache->getItem($cacheKey);
 
         if ($cacheItem->isHit() && is_array($cacheItem->get())) {

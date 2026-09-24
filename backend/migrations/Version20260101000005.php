@@ -37,7 +37,7 @@ final class Version20260101000005 extends AbstractMigration
                 date DATE NOT NULL,
                 total_inventory INTEGER NOT NULL CHECK (total_inventory >= 0),
                 total_reserved INTEGER NOT NULL DEFAULT 0 CHECK (total_reserved >= 0),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
                 PRIMARY KEY (hotel_id, room_type_id, date),
                 CONSTRAINT fk_room_type_inventory_hotel
                     FOREIGN KEY (hotel_id) REFERENCES hotel (id) ON DELETE CASCADE,

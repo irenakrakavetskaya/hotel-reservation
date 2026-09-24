@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use Doctrine\DBAL\Connection;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class RegistrationControllerTest extends WebTestCase
 {
+    private KernelBrowser $client;
+
     protected function setUp(): void
     {
         self::ensureKernelShutdown();
-        self::bootKernel();
+        $this->client = static::createClient();
 
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
@@ -21,7 +24,7 @@ final class RegistrationControllerTest extends WebTestCase
 
     public function testItRegistersAUserAndReturnsAJwt(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
 
         $client->request('POST', '/v1/auth/register', content: json_encode([
             'email' => 'new-user@example.com',
@@ -38,7 +41,7 @@ final class RegistrationControllerTest extends WebTestCase
 
     public function testItRejectsDuplicateEmailCaseInsensitively(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         $payload = [
             'email' => 'duplicate@example.com',
             'password' => 'secret-password',
@@ -56,7 +59,7 @@ final class RegistrationControllerTest extends WebTestCase
 
     public function testItValidatesRegistrationPayload(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
 
         $client->request('POST', '/v1/auth/register', content: json_encode([
             'email' => 'invalid-email',

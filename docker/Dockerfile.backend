@@ -14,8 +14,7 @@ WORKDIR /app
 COPY composer.* ./
 # --no-scripts / --no-autoloader: app code isn't copied in yet, so
 # post-install scripts and the classmap have nothing to run against.
-RUN composer install \
-        --no-dev \
+RUN composer install \       
         --no-scripts \
         --no-autoloader \
         --no-interaction \
@@ -53,14 +52,14 @@ RUN { \
 
 WORKDIR /app
 
-COPY --from=composer_deps /app/vendor ./vendor
+COPY --from=composer_deps --chown=www-data:www-data /app/vendor ./vendor
 COPY . .
 
-RUN printf 'APP_ENV=prod\nAPP_DEBUG=0\n' > .env
+RUN printf 'APP_ENV=dev\nAPP_DEBUG=0\n' > .env
 
 # Generate the autoloader now that app code is present; composer install in
 # stage 1 skipped this because vendor/ was populated before src/ existed.
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
+RUN composer dump-autoload --optimize --classmap-authoritative
 
 # Symfony cache/log dirs must be writable by the FPM process;
 # www-data is the default php-fpm-alpine user/group.
@@ -69,7 +68,7 @@ RUN mkdir -p var/cache var/log \
 
 USER www-data
 
-ENV APP_ENV=prod
+ENV APP_ENV=dev
 EXPOSE 9000
 
 CMD ["php-fpm"]

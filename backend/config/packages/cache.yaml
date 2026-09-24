@@ -1,4 +1,13 @@
 framework:
     cache:
+        prefix_seed: hotel_app
         app: cache.adapter.redis
         default_redis_provider: '%env(REDIS_URL)%'
+
+# Functional tests shouldn't need a real Redis server/extension available —
+# Redis here is purely a read accelerator (AGENTS.md invariant #4), so an
+# in-memory adapter is a safe swap for the test environment.
+when@test:
+    framework:
+        cache:
+            app: cache.adapter.array

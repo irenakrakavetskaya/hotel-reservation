@@ -8,15 +8,18 @@ use App\Domain\User\Entity\User;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AvailabilityControllerTest extends WebTestCase
 {
+    private KernelBrowser $client;
+
     protected function setUp(): void
     {
         self::ensureKernelShutdown();
-        self::bootKernel();
+        $this->client = static::createClient();
 
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
@@ -25,7 +28,7 @@ final class AvailabilityControllerTest extends WebTestCase
 
     public function testItReturnsAvailabilityAndRatesForStayRange(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('guest@example.com');
         ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedAvailabilityScenario();
 
@@ -47,7 +50,7 @@ final class AvailabilityControllerTest extends WebTestCase
 
     public function testItAllowsAnonymousAvailabilityChecks(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedAvailabilityScenario();
 
         $client->request(
@@ -60,7 +63,7 @@ final class AvailabilityControllerTest extends WebTestCase
 
     public function testItValidatesQueryString(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('guest2@example.com');
         ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedAvailabilityScenario();
 

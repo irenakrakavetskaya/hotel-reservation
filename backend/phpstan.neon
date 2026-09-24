@@ -3,3 +3,7 @@ parameters:
         - src
         - tests
     level: 6
+    excludePaths:
+        # Standalone CLI worker script for ReservationConcurrencyTest — a
+        # framework-free fixture invoked via proc_open, not application code.
+        - tests/Functional/Support/concurrent_reservation_worker.php

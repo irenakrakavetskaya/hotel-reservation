@@ -73,7 +73,7 @@ final class AvailabilityQueryService
         int $version,
     ): string {
         return sprintf(
-            'availability:%d:%d:%s:%s:%d:v%d',
+            'availability.%d.%d.%s.%s.%d.v%d',
             $hotelId,
             $roomTypeId,
             $startDate->format('Ymd'),

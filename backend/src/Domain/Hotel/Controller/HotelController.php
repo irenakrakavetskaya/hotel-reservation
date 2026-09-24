@@ -47,7 +47,7 @@ final class HotelController extends AbstractController
         $city = is_string($cityParam) && '' !== $cityParam ? $cityParam : null;
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::hotelRead());
         $cacheKey = sprintf(
-            'hotel:list:v%d:%s',
+            'hotel.list.v%d.%s',
             $scopeVersion,
             null === $city ? 'all' : sha1(mb_strtolower($city)),
         );
@@ -74,7 +74,7 @@ final class HotelController extends AbstractController
     public function get(int $id): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::hotelRead());
-        $cacheKey = sprintf('hotel:get:v%d:%d', $scopeVersion, $id);
+        $cacheKey = sprintf('hotel.get.v%d.%d', $scopeVersion, $id);
         $cacheItem = $this->cache->getItem($cacheKey);
 
         if ($cacheItem->isHit() && is_array($cacheItem->get())) {

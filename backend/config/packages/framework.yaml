@@ -11,3 +11,10 @@ framework:
             scheduler_default: 'sync://'
         routing:
             'Symfony\Component\Console\Messenger\RunCommandMessage': scheduler_default
+
+# Required for WebTestCase/KernelTestCase (self::getContainer(), static::createClient())
+# used by every functional test under tests/Functional — without this, the
+# "test.service_container" service doesn't exist.
+when@test:
+    framework:
+        test: true

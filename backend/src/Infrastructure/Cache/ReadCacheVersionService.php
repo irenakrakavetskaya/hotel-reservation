@@ -36,6 +36,6 @@ final class ReadCacheVersionService
 
     private function toVersionKey(string $scope): string
     {
-        return 'cache-version:' . $scope;
+        return 'cache-version.' . $scope;
     }
 }

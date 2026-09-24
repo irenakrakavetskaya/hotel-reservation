@@ -33,8 +33,8 @@ final class Version20260101000002 extends AbstractMigration
                 max_occupancy SMALLINT NOT NULL CHECK (max_occupancy > 0),
                 base_price INTEGER NOT NULL CHECK (base_price >= 0),
                 amenities JSONB NOT NULL DEFAULT '[]'::jsonb,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                created_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT now()
             )
         SQL);
 

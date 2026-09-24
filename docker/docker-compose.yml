@@ -15,12 +15,16 @@ services:
     build:
       context: ../backend
       dockerfile: ../docker/Dockerfile.backend
+    command: ["php-fpm", "-d", "opcache.validate_timestamps=1"]
     environment:
-      APP_ENV: prod
+      APP_ENV: dev
       APP_SECRET: ${APP_SECRET:-changeme}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
       REDIS_URL: redis://redis:6379
+    volumes:
+      - ../backend:/app
+      - backend_vendor:/app/vendor
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,7 +50,7 @@ services:
       dockerfile: ../docker/Dockerfile.backend
     command: php bin/console messenger:consume scheduler_default --time-limit=3600 --memory-limit=128M
     environment:
-      APP_ENV: prod
+      APP_ENV: dev
       APP_SECRET: ${APP_SECRET:-changeme}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8

@@ -43,8 +43,8 @@ final class Version20260101000006 extends AbstractMigration
                 status VARCHAR(20) NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('pending', 'paid', 'refunded', 'canceled', 'rejected')),
                 total_price INTEGER NOT NULL CHECK (total_price >= 0),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
                 CONSTRAINT check_reservation_dates CHECK (end_date > start_date)
             )
         SQL);

@@ -123,6 +123,6 @@ class RoomTypeRateRepository extends ServiceEntityRepository
 
     private function buildRateKey(int $hotelId, int $roomTypeId, string $date): string
     {
-        return sprintf('rate:%d:%d:%s', $hotelId, $roomTypeId, $date);
+        return sprintf('rate.%d.%d.%s', $hotelId, $roomTypeId, $date);
     }
 }

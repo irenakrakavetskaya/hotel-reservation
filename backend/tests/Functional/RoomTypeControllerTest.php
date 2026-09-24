@@ -8,15 +8,20 @@ use App\Domain\User\Entity\User;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RoomTypeControllerTest extends WebTestCase
 {
+    private KernelBrowser $client;
+
     protected function setUp(): void
     {
         self::ensureKernelShutdown();
-        self::bootKernel();
+        // The client must be created before the first getContainer() call —
+        // WebTestCase::createClient() forbids booting the kernel beforehand.
+        $this->client = static::createClient();
 
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
@@ -25,7 +30,7 @@ final class RoomTypeControllerTest extends WebTestCase
 
     public function testStaffCanCreateRoomType(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('staff@example.com', ['ROLE_STAFF']);
         $hotelId = $this->seedHotel();
 
@@ -51,7 +56,7 @@ final class RoomTypeControllerTest extends WebTestCase
 
     public function testNonStaffCannotCreateRoomType(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('user@example.com');
         $hotelId = $this->seedHotel();
 
@@ -72,7 +77,7 @@ final class RoomTypeControllerTest extends WebTestCase
 
     public function testCreateValidationFailureReturns422(): void
     {
-        $client = static::createClient();
+        $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('staff2@example.com', ['ROLE_STAFF']);
         $hotelId = $this->seedHotel();
 

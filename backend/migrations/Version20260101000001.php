@@ -31,8 +31,8 @@ final class Version20260101000001 extends AbstractMigration
                 star_rating SMALLINT NOT NULL CHECK (star_rating BETWEEN 1 AND 5),
                 description TEXT DEFAULT NULL,
                 amenities JSONB NOT NULL DEFAULT '[]'::jsonb,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                created_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT now()
             )
         SQL);
 

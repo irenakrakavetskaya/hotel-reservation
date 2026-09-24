@@ -30,8 +30,8 @@ final class Version20260101000003 extends AbstractMigration
                 floor SMALLINT DEFAULT NULL,
                 status VARCHAR(20) NOT NULL DEFAULT 'active'
                     CHECK (status IN ('active', 'maintenance', 'inactive')),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                created_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ(0) NOT NULL DEFAULT now(),
                 CONSTRAINT uniq_room_hotel_room_number UNIQUE (hotel_id, room_number)
             )
         SQL);
