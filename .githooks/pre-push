@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Runs the backend test suite before pushing. Requires the test database
+# (hotel_reservations_test) to be reachable, e.g. `docker compose up postgres`.
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+
+echo "pre-push: running composer test..."
+cd "$root/backend"
+composer test || {
+    echo "pre-push: composer test failed. Fix the tests or bypass with --no-verify." >&2
+    exit 1
+}

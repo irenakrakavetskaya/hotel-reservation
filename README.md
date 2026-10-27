@@ -108,6 +108,16 @@ composer test
 composer lint
 ```
 
+Git hooks live in `.githooks/`. Enable them once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`pre-commit` runs `composer lint` when backend files are staged; `pre-push` runs
+`composer test` (needs the `hotel_reservations_test` database). Bypass with
+`--no-verify` when necessary.
+
 Generate local JWT keys when using the backend outside Docker:
 
 ```bash

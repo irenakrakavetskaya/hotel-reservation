@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+# Runs backend lint (php-cs-fixer dry run + phpstan) when backend files are staged.
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '^backend/'; then
+    echo "pre-commit: running composer lint..."
+    cd "$root/backend"
+    composer lint || {
+        echo "pre-commit: composer lint failed. Fix the issues or bypass with --no-verify." >&2
+        exit 1
+    }
+fi
