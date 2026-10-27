@@ -1,6 +1,19 @@
-import Link from 'next/link';
+import { getHotels } from '../lib/server-api';
+import SearchForm, { type HotelOption } from './SearchForm';
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic';
+
+async function loadHotelOptions(): Promise<HotelOption[]> {
+  try {
+    return (await getHotels()).map(({ id, name }) => ({ id, name }));
+  } catch {
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const hotels = await loadHotelOptions();
+
   return (
     <main className="page-shell">
       <section className="hero" id="search">
@@ -9,21 +22,7 @@ export default function HomePage() {
         <p className="intro">
           Browse comfortable stays, compare room types, and book with confidence.
         </p>
-        <form className="search-panel">
-          <label>
-            Destination
-            <input name="destination" placeholder="City or hotel" />
-          </label>
-          <label>
-            Check-in
-            <input name="checkIn" type="date" />
-          </label>
-          <label>
-            Check-out
-            <input name="checkOut" type="date" />
-          </label>
-          <Link className="button-link" href="/hotels">Search stays <span aria-hidden="true">-&gt;</span></Link>
-        </form>
+        <SearchForm hotels={hotels} />
       </section>
 
       <section className="signal-row" aria-label="Service highlights">

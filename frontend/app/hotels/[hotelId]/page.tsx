@@ -7,13 +7,16 @@ export const dynamic = 'force-dynamic';
 
 type HotelPageProps = {
   params: Promise<{ hotelId: string }>;
+  searchParams: Promise<{ checkIn?: string; checkOut?: string }>;
 };
+
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 function formatPrice(priceInCents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(priceInCents / 100);
 }
 
-function RoomTypeCard({ hotelId, roomType }: { hotelId: number; roomType: RoomType }) {
+function RoomTypeCard({ hotelId, roomType, stayQuery }: { hotelId: number; roomType: RoomType; stayQuery: string }) {
   return (
     <article className="room-card">
       <div>
@@ -23,14 +26,17 @@ function RoomTypeCard({ hotelId, roomType }: { hotelId: number; roomType: RoomTy
       </div>
       <div className="room-card__footer">
         <strong>{formatPrice(roomType.basePrice)} <span>/ night</span></strong>
-        <Link href={`/hotels/${hotelId}/room-types/${roomType.id}`}>Explore room <span aria-hidden="true">-&gt;</span></Link>
+        <Link href={`/hotels/${hotelId}/room-types/${roomType.id}${stayQuery}`}>Explore room <span aria-hidden="true">-&gt;</span></Link>
       </div>
     </article>
   );
 }
 
-export default async function HotelDetailPage({ params }: HotelPageProps) {
+export default async function HotelDetailPage({ params, searchParams }: HotelPageProps) {
   const hotelId = Number((await params).hotelId);
+  const { checkIn, checkOut } = await searchParams;
+  const hasStay = checkIn && checkOut && datePattern.test(checkIn) && datePattern.test(checkOut) && checkOut > checkIn;
+  const stayQuery = hasStay ? `/availability?${new URLSearchParams({ startDate: checkIn, endDate: checkOut, roomCount: '1' })}` : '';
   if (!Number.isInteger(hotelId) || hotelId < 1) notFound();
 
   let hotel: Awaited<ReturnType<typeof getHotel>>;
@@ -58,7 +64,7 @@ export default async function HotelDetailPage({ params }: HotelPageProps) {
       </section>
       <section className="rooms-section">
         <div className="section-heading"><p className="eyebrow">Choose your room</p><h2>Room types</h2></div>
-        {roomTypes.length > 0 ? <div className="room-grid">{roomTypes.map((roomType) => <RoomTypeCard key={roomType.id} hotelId={hotel.id} roomType={roomType} />)}</div> : <div className="empty-state"><h3>No room types listed yet.</h3><p>Check back soon for available rooms at this hotel.</p></div>}
+        {roomTypes.length > 0 ? <div className="room-grid">{roomTypes.map((roomType) => <RoomTypeCard key={roomType.id} hotelId={hotel.id} roomType={roomType} stayQuery={stayQuery} />)}</div> : <div className="empty-state"><h3>No room types listed yet.</h3><p>Check back soon for available rooms at this hotel.</p></div>}
       </section>
     </main>
   );
