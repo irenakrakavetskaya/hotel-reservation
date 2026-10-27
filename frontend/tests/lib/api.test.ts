@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiFetch } from './api';
+import { ApiError, apiFetch } from '../../lib/api';
 
 function mockFetch(response: Response) {
   const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(response.clone()));

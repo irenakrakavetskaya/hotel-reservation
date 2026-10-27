@@ -1,14 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, type Availability, type Hotel, type Reservation, type RoomType } from '../../../../../lib/api';
-import BookingForm from './BookingForm';
+import { ApiError, type Availability, type Hotel, type Reservation, type RoomType } from '../../../../../../lib/api';
+import BookingForm from '../../../../../../app/hotels/[hotelId]/room-types/[roomTypeId]/BookingForm';
 
 const api = vi.hoisted(() => ({ availability: vi.fn(), createReservation: vi.fn(), payReservation: vi.fn(), cancelReservation: vi.fn() }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
-vi.mock('../../../../../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../../../lib/api')>()),
+vi.mock('../../../../../../lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../../../lib/api')>()),
   hotelApi: api,
 }));
 

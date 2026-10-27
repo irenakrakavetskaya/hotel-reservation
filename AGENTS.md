@@ -61,7 +61,7 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
 - Backend lint and static analysis: from `backend/`, run `composer lint`.
 - Full local stack: from `docker/`, run `docker compose up`.
 - Frontend checks, from `frontend/`: `npm run lint`, `npm run typecheck`, and
-  `npm test` (Vitest + React Testing Library; `npm run test:watch` for watch
+  `npm test` (Vitest + React Testing Library, tests in `frontend/tests/`; `npm run test:watch` for watch
   mode). CI runs `npm ci`, `npm test` in `.gitlab-ci.yml`.
 
 For local backend prerequisites and API notes, read [backend/README.md](backend/README.md).

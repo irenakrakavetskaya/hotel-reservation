@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, type Reservation } from '../lib/api';
-import HomePage from './page';
-import ReservationsPage from './reservations/page';
+import { ApiError, type Reservation } from '../../lib/api';
+import HomePage from '../../app/page';
+import ReservationsPage from '../../app/reservations/page';
 
 const server = vi.hoisted(() => ({ getHotels: vi.fn(), getReservations: vi.fn(), getAccessToken: vi.fn() }));
 
-vi.mock('../lib/server-api', () => server);
+vi.mock('../../lib/server-api', () => server);
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
-vi.mock('./reservations/ReservationCard', () => ({
+vi.mock('../../app/reservations/ReservationCard', () => ({
   default: ({ initialReservation }: { initialReservation: Reservation }) => <article>{initialReservation.reservationId}</article>,
 }));
 

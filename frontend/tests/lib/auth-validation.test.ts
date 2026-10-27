@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseApiError, validateConfirmation, validateEmail, validateLoginPassword, validateNewPassword } from './auth-validation';
+import { parseApiError, validateConfirmation, validateEmail, validateLoginPassword, validateNewPassword } from '../../lib/auth-validation';
 
 describe('validateEmail', () => {
   it.each([

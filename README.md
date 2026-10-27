@@ -149,7 +149,7 @@ npm test        # Vitest + React Testing Library (jsdom)
 npm run build
 ```
 
-Tests live next to the code as `*.test.ts(x)`; `npm run test:watch` re-runs them on change.
+Tests live in `frontend/tests/`, mirroring the source tree (`*.test.ts(x)`); `npm run test:watch` re-runs them on change.
 
 The frontend includes these user flows:
 

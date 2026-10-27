@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '../../../lib/api';
-import { POST as login } from './login/route';
-import { POST as logout } from './logout/route';
-import { POST as register } from './register/route';
+import { ApiError } from '../../../../lib/api';
+import { POST as login } from '../../../../app/api/auth/login/route';
+import { POST as logout } from '../../../../app/api/auth/logout/route';
+import { POST as register } from '../../../../app/api/auth/register/route';
 
 const { authApi } = vi.hoisted(() => ({ authApi: { login: vi.fn(), register: vi.fn() } }));
 
-vi.mock('../../../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../lib/api')>()),
+vi.mock('../../../../lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/api')>()),
   authApi,
 }));
 
