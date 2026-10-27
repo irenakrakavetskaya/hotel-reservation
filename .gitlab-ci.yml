@@ -137,7 +137,7 @@ test:frontend:
   script:
     - cd frontend
     - npm ci --cache .npm --prefer-offline
-    - npm test -- --ci
+    - npm test
 
 # ============================== build ==============================
 # Builds run only on the default branch or on tags — feature branches stop

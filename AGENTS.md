@@ -60,9 +60,9 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
 - Backend tests: from `backend/`, run `composer test` or `vendor/bin/phpunit`.
 - Backend lint and static analysis: from `backend/`, run `composer lint`.
 - Full local stack: from `docker/`, run `docker compose up`.
-- Frontend CI commands (`npm ci`, `npm run lint`, `npx tsc --noEmit`, and
-  `npm test -- --ci`) are declared in `.gitlab-ci.yml`, but `frontend/` is
-  currently only a Docker build stub.
+- Frontend checks, from `frontend/`: `npm run lint`, `npm run typecheck`, and
+  `npm test` (Vitest + React Testing Library; `npm run test:watch` for watch
+  mode). CI runs `npm ci`, `npm test` in `.gitlab-ci.yml`.
 
 For local backend prerequisites and API notes, read [backend/README.md](backend/README.md).
 For the data model, API contract, concurrency design, and testing priorities, read

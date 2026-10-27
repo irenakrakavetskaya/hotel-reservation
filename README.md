@@ -144,8 +144,11 @@ Useful checks:
 ```bash
 npm run lint
 npm run typecheck
+npm test        # Vitest + React Testing Library (jsdom)
 npm run build
 ```
+
+Tests live next to the code as `*.test.ts(x)`; `npm run test:watch` re-runs them on change.
 
 The frontend includes these user flows:
 
