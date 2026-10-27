@@ -114,9 +114,10 @@ Git hooks live in `.githooks/`. Enable them once per clone:
 git config core.hooksPath .githooks
 ```
 
-`pre-commit` runs `composer lint` when backend files are staged; `pre-push` runs
-`composer test` (needs the `hotel_reservations_test` database). Bypass with
-`--no-verify` when necessary.
+`pre-commit` runs `composer lint` when backend files are staged and
+`npm run lint` + `npm run typecheck` when frontend files are staged; `pre-push` runs
+`composer test` (needs the `hotel_reservations_test` database) and `npm test`.
+Bypass with `--no-verify` when necessary.
 
 Generate local JWT keys when using the backend outside Docker:
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
-# Runs backend lint (php-cs-fixer dry run + phpstan) when backend files are staged.
+# Runs backend lint (php-cs-fixer dry run + phpstan) when backend files are staged,
+# and frontend lint + typecheck when frontend files are staged.
 set -eu
 
 root="$(git rev-parse --show-toplevel)"
@@ -9,6 +10,15 @@ if git diff --cached --name-only --diff-filter=ACMR | grep -q '^backend/'; then
     cd "$root/backend"
     composer lint || {
         echo "pre-commit: composer lint failed. Fix the issues or bypass with --no-verify." >&2
+        exit 1
+    }
+fi
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '^frontend/'; then
+    echo "pre-commit: running npm run lint and npm run typecheck..."
+    cd "$root/frontend"
+    npm run lint && npm run typecheck || {
+        echo "pre-commit: frontend lint/typecheck failed. Fix the issues or bypass with --no-verify." >&2
         exit 1
     }
 fi

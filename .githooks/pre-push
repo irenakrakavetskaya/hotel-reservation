@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Runs the backend test suite before pushing. Requires the test database
+# Runs the backend and frontend test suites before pushing. Requires the test database
 # (hotel_reservations_test) to be reachable, e.g. `docker compose up postgres`.
 set -eu
 
@@ -9,5 +9,12 @@ echo "pre-push: running composer test..."
 cd "$root/backend"
 composer test || {
     echo "pre-push: composer test failed. Fix the tests or bypass with --no-verify." >&2
+    exit 1
+}
+
+echo "pre-push: running npm test..."
+cd "$root/frontend"
+npm test || {
+    echo "pre-push: npm test failed. Fix the tests or bypass with --no-verify." >&2
     exit 1
 }
