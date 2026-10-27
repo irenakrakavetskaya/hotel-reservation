@@ -36,8 +36,14 @@ function setAuthCookie(response: NextResponse, token: string, requestUrl: string
 
 function authErrorResponse(error: unknown): NextResponse {
   if (error instanceof ApiError) {
-    const message = error.status === 409 ? 'An account with this email already exists.' : error.status === 422 ? 'Please check your registration details.' : 'Registration failed.';
-    return NextResponse.json({ error: message }, { status: error.status });
+    if (error.status === 409) {
+      const message = 'An account with this email already exists. Try signing in instead.';
+      return NextResponse.json({ error: message, code: 'email_taken', fieldErrors: { email: message } }, { status: 409 });
+    }
+    if (error.status === 422) {
+      return NextResponse.json({ error: 'Some details are not valid. Check the highlighted fields and try again.', code: 'validation_failed' }, { status: 422 });
+    }
+    return NextResponse.json({ error: 'Registration is temporarily unavailable. Please try again in a moment.', code: 'unavailable' }, { status: error.status >= 500 ? 503 : error.status });
   }
-  return NextResponse.json({ error: 'Registration failed.' }, { status: 500 });
+  return NextResponse.json({ error: 'Registration is temporarily unavailable. Please try again in a moment.', code: 'unavailable' }, { status: 503 });
 }

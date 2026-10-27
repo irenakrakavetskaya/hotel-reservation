@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import AuthModal from '../../../../../components/AuthModal';
 import { ApiError, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
 
 type BookingFormProps = {
@@ -37,6 +37,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
   const [isPaying, setIsPaying] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   async function checkAvailability(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,7 +131,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
       {availability?.canBook && !reservation && (
         <div className="booking-confirmation">
           <div><span className="booking-confirmation__label">Available for your stay</span><strong>{formatPrice(availability.totalPrice)}</strong><span>{availability.nights} nights · {roomCount} room{roomCount === 1 ? '' : 's'}</span></div>
-          {token ? <button type="button" onClick={createReservation} disabled={isBooking || !reservationId}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <Link className="button-link" href="/login">Sign in to book <span aria-hidden="true">-&gt;</span></Link>}
+          {token ? <button type="button" onClick={createReservation} disabled={isBooking || !reservationId}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => setIsAuthOpen(true)}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
         </div>
       )}
       {reservation && (
@@ -142,6 +143,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
         </div>
       )}
       {error && <p className="booking-error" role="alert">{error}</p>}
+      {!token && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
     </section>
   );
 }

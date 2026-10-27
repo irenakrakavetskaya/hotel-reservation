@@ -22,9 +22,14 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     if (error instanceof ApiError) {
-      return NextResponse.json({ error: error.status === 401 ? 'Email or password is incorrect.' : 'Login failed.' }, { status: error.status });
+      if (error.status === 401) {
+        return NextResponse.json({ error: 'Email or password is incorrect. Check both and try again, or create an account.', code: 'invalid_credentials' }, { status: 401 });
+      }
+      if (error.status === 429) {
+        return NextResponse.json({ error: 'Too many attempts. Wait a moment and try again.', code: 'rate_limited' }, { status: 429 });
+      }
     }
-    return NextResponse.json({ error: 'Login failed.' }, { status: 500 });
+    return NextResponse.json({ error: "We couldn't reach the sign-in service. Please try again.", code: 'unavailable' }, { status: 503 });
   }
 }
 

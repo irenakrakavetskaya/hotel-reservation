@@ -143,3 +143,34 @@ button:hover { background: #0b554e; }
   .search-panel--has-errors { padding-bottom: 38px; }
 }
 input[aria-invalid='true'] { border-color: #b3261e; }
+.auth-form .field-error, .auth-form .field-hint { display: block; margin-top: 4px; }
+.field-hint { color: var(--muted, #5b6b67); font-size: 0.78rem; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 44px; }
+.auth-form .password-toggle, .password-toggle { position: absolute; top: 0; right: 0; bottom: 0; width: 44px; margin: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--muted); border: 0; cursor: pointer; }
+.password-toggle:hover { color: var(--ink); }
+
+dialog.auth-modal { width: min(880px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; margin: auto; padding: 28px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(23, 35, 33, 0.25); }
+dialog.auth-modal::backdrop { background: rgba(23, 35, 33, 0.5); }
+.auth-modal__header { position: relative; display: flex; justify-content: center; align-items: center; padding: 0 48px; }
+.auth-modal__header h2 { margin: 0; text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; }
+.auth-modal__close { position: absolute; top: 50%; right: 0; transform: translateY(-50%); min-height: 40px; padding: 0 14px; background: transparent; color: var(--ink); font-size: 1.6rem; line-height: 1; }
+.auth-modal__close:hover { background: rgba(23, 35, 33, 0.08); }
+.auth-modal__panels { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 12px; }
+.auth-modal__panels section { padding: 8px 28px 8px 0; }
+.auth-modal__panels section + section { padding: 8px 0 8px 28px; border-left: 1px solid var(--line); }
+.auth-modal__panels h3 { margin: 12px 0 4px; font-size: 1.2rem; }
+.auth-modal__panels p { margin: 0; color: var(--muted); }
+.auth-modal__panels section { display: flex; flex-direction: column; }
+/* Forms fill the column and pin the submit button to the bottom so both buttons share one line; errors render above it. */
+.auth-modal .auth-form { flex: 1; display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+.auth-modal .auth-form button[type='submit'] { order: 2; margin-top: auto; }
+.auth-modal .auth-form .booking-error { order: 1; margin: 0 !important; }
+.auth-modal .auth-form label + label { margin-top: 0; }
+@media (max-width: 760px) {
+  dialog.auth-modal { padding: 20px; }
+  .auth-modal__panels { grid-template-columns: 1fr; }
+  .auth-modal__panels section, .auth-modal__panels section + section { padding: 8px 0; border-left: 0; }
+  .auth-modal__panels section + section { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 20px; }
+}
+.link-button { order: 1; margin: 0; padding: 0; background: none; border: 0; color: var(--accent, #0f6b5c); text-decoration: underline; cursor: pointer; font-size: 0.85rem; align-self: flex-start; }
