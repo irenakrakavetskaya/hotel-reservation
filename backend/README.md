@@ -11,8 +11,11 @@
    `php bin/console app:rates:recompute`.
 
 For deterministic local data, run `php bin/console app:demo:seed`. This creates
-demo customer and staff users, hotels, room types, rooms, inventory, and rates.
-The command is idempotent and does not delete existing records. Demo credentials
+demo customer and staff users, hotels, room types, rooms, inventory, rates, and
+four reservations (paid, pending, rejected, canceled) for the demo customer.
+Reservations are created through the normal services, so inventory counters stay
+consistent. The command requires the Redis extension, so run it in the backend
+container if your host PHP lacks it. The command is idempotent and does not delete existing records. Demo credentials
 are `demo@example.com` / `demo-password` and `staff@example.com` /
 `staff-password`.
 
