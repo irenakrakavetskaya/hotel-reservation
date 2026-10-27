@@ -18,7 +18,9 @@ type BookingFormProps = {
 function dateAfter(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function formatPrice(priceInCents: number | null): string {
@@ -135,7 +137,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
       <form className="booking-form" onSubmit={checkAvailability}>
         <label>
           Check-in
-          <input type="date" value={startDate} min={dateAfter(1)} onChange={(event) => editStay(() => setStartDate(event.target.value))} required />
+          <input type="date" value={startDate} min={dateAfter(0)} onChange={(event) => editStay(() => setStartDate(event.target.value))} required />
         </label>
         <label>
           Check-out
