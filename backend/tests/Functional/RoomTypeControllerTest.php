@@ -37,7 +37,7 @@ final class RoomTypeControllerTest extends WebTestCase
         $client->request(
             'POST',
             sprintf('/v1/hotels/%d/room-types', $hotelId),
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token, 'CONTENT_TYPE' => 'application/json'],
             content: json_encode([
                 'name' => 'Deluxe',
                 'description' => 'City view',
@@ -63,7 +63,7 @@ final class RoomTypeControllerTest extends WebTestCase
         $client->request(
             'POST',
             sprintf('/v1/hotels/%d/room-types', $hotelId),
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token, 'CONTENT_TYPE' => 'application/json'],
             content: json_encode([
                 'name' => 'Deluxe',
                 'maxOccupancy' => 3,
@@ -84,7 +84,7 @@ final class RoomTypeControllerTest extends WebTestCase
         $client->request(
             'POST',
             sprintf('/v1/hotels/%d/room-types', $hotelId),
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token, 'CONTENT_TYPE' => 'application/json'],
             content: json_encode([
                 'name' => '',
                 'maxOccupancy' => 0,

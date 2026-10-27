@@ -36,7 +36,7 @@ final class PaymentControllerTest extends WebTestCase
         $client->request(
             'POST',
             '/v1/payments',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token, 'CONTENT_TYPE' => 'application/json'],
             content: json_encode(['reservationID' => $reservationId, 'approved' => true], JSON_THROW_ON_ERROR),
         );
 
@@ -53,6 +53,7 @@ final class PaymentControllerTest extends WebTestCase
         $client->request(
             'POST',
             '/v1/payments',
+            server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['reservationID' => Uuid::v7()->toRfc4122(), 'approved' => true], JSON_THROW_ON_ERROR),
         );
 
@@ -67,7 +68,7 @@ final class PaymentControllerTest extends WebTestCase
         $client->request(
             'POST',
             '/v1/payments',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token, 'CONTENT_TYPE' => 'application/json'],
             content: json_encode(['reservationID' => 'not-a-uuid', 'approved' => 'yes'], JSON_THROW_ON_ERROR),
         );
 

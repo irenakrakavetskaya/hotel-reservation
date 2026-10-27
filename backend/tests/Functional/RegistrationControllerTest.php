@@ -26,7 +26,7 @@ final class RegistrationControllerTest extends WebTestCase
     {
         $client = $this->client;
 
-        $client->request('POST', '/v1/auth/register', content: json_encode([
+        $client->request('POST', '/v1/auth/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'email' => 'new-user@example.com',
             'password' => 'secret-password',
             'passwordConfirmation' => 'secret-password',
@@ -48,11 +48,11 @@ final class RegistrationControllerTest extends WebTestCase
             'passwordConfirmation' => 'secret-password',
         ];
 
-        $client->request('POST', '/v1/auth/register', content: json_encode($payload, JSON_THROW_ON_ERROR));
+        $client->request('POST', '/v1/auth/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($payload, JSON_THROW_ON_ERROR));
         self::assertResponseStatusCodeSame(201);
 
         $payload['email'] = 'DUPLICATE@example.com';
-        $client->request('POST', '/v1/auth/register', content: json_encode($payload, JSON_THROW_ON_ERROR));
+        $client->request('POST', '/v1/auth/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($payload, JSON_THROW_ON_ERROR));
 
         self::assertResponseStatusCodeSame(409);
     }
@@ -61,7 +61,7 @@ final class RegistrationControllerTest extends WebTestCase
     {
         $client = $this->client;
 
-        $client->request('POST', '/v1/auth/register', content: json_encode([
+        $client->request('POST', '/v1/auth/register', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
             'email' => 'invalid-email',
             'password' => 'short',
             'passwordConfirmation' => 'different',

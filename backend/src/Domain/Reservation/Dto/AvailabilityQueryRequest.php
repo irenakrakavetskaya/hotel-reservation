@@ -43,6 +43,13 @@ final class AvailabilityQueryRequest
     #[Assert\IsTrue(message: 'endDate must be after startDate.')]
     public function isDateRangeValid(): bool
     {
-        return $this->getEndDate() > $this->getStartDate();
+        // Malformed dates are reported by the #[Assert\Date] constraints.
+        $start = \DateTimeImmutable::createFromFormat('!Y-m-d', $this->startDate);
+        $end = \DateTimeImmutable::createFromFormat('!Y-m-d', $this->endDate);
+        if (false === $start || false === $end) {
+            return true;
+        }
+
+        return $end > $start;
     }
 }
