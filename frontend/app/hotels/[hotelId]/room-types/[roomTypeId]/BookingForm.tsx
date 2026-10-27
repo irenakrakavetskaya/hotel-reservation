@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRef, useState } from 'react';
 import AuthModal from '../../../../../components/AuthModal';
 import { ApiError, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
 
@@ -31,7 +32,8 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
   const [roomCount, setRoomCount] = useState(initialRoomCount ?? 1);
   const [availability, setAvailability] = useState<Availability | null>(initialAvailability ?? null);
   const [reservation, setReservation] = useState<Reservation | null>(null);
-  const [reservationId, setReservationId] = useState<string | null>(null);
+  // One ID per stay: reused on retries so a repeated POST is idempotent; cleared when the stay changes.
+  const reservationIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -43,14 +45,13 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
     event.preventDefault();
     setError(null);
     setReservation(null);
-    setReservationId(null);
+    reservationIdRef.current = null;
     setIsChecking(true);
 
     try {
       const result = await hotelApi.availability(hotel.id, roomType.id, startDate, endDate, roomCount, token);
       setAvailability(result);
       if (!result.canBook) setError(`Only ${result.minAvailableRooms} room${result.minAvailableRooms === 1 ? '' : 's'} available for these dates.`);
-      else setReservationId(crypto.randomUUID());
     } catch (requestError) {
       setAvailability(null);
       setError(messageForError(requestError));
@@ -60,7 +61,9 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
   }
 
   async function createReservation() {
-    if (!reservationId || !availability || !availability.canBook) return;
+    if (!availability || !availability.canBook) return;
+    reservationIdRef.current ??= crypto.randomUUID();
+    const reservationId = reservationIdRef.current;
     setError(null);
     setIsBooking(true);
 
@@ -75,10 +78,26 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
       }, token);
       setReservation(result);
     } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.isUnauthorized) setIsAuthOpen(true);
+      if (requestError instanceof ApiError && requestError.isConflict) reservationIdRef.current = null;
       setError(messageForError(requestError));
     } finally {
       setIsBooking(false);
     }
+  }
+
+  function editStay(change: () => void) {
+    change();
+    reservationIdRef.current = null;
+    setAvailability(null);
+    setError(null);
+  }
+
+  function bookAnother() {
+    reservationIdRef.current = null;
+    setReservation(null);
+    setAvailability(null);
+    setError(null);
   }
 
   async function payReservation(approved: boolean) {
@@ -116,22 +135,27 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
       <form className="booking-form" onSubmit={checkAvailability}>
         <label>
           Check-in
-          <input type="date" value={startDate} min={dateAfter(1)} onChange={(event) => setStartDate(event.target.value)} required />
+          <input type="date" value={startDate} min={dateAfter(1)} onChange={(event) => editStay(() => setStartDate(event.target.value))} required />
         </label>
         <label>
           Check-out
-          <input type="date" value={endDate} min={startDate} onChange={(event) => setEndDate(event.target.value)} required />
+          <input type="date" value={endDate} min={startDate} onChange={(event) => editStay(() => setEndDate(event.target.value))} required />
         </label>
         <label>
           Rooms
-          <input type="number" min="1" max={roomType.maxOccupancy} value={roomCount} onChange={(event) => setRoomCount(Number(event.target.value))} required />
+          <input type="number" min="1" max={roomType.maxOccupancy} value={roomCount} onChange={(event) => editStay(() => setRoomCount(Number(event.target.value)))} required />
         </label>
-        <button type="submit" disabled={isChecking || isBooking}>{isChecking ? 'Checking availability...' : 'Re-check availability'}</button>
+        <button type="submit" disabled={isChecking || isBooking}>{isChecking ? 'Checking availability...' : availability ? 'Re-check availability' : 'Check availability'}</button>
       </form>
       {availability?.canBook && !reservation && (
         <div className="booking-confirmation">
-          <div><span className="booking-confirmation__label">Available for your stay</span><strong>{formatPrice(availability.totalPrice)}</strong><span>{availability.nights} nights · {roomCount} room{roomCount === 1 ? '' : 's'}</span></div>
-          {token ? <button type="button" onClick={createReservation} disabled={isBooking || !reservationId}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => setIsAuthOpen(true)}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
+          <div>
+            <span className="booking-confirmation__label">Available for your stay</span>
+            <strong>{formatPrice(availability.totalPrice)}</strong>
+            <span>{hotel.name} · {roomType.name}</span>
+            <span>{startDate} → {endDate} · {availability.nights} night{availability.nights === 1 ? '' : 's'} · {roomCount} room{roomCount === 1 ? '' : 's'}</span>
+          </div>
+          {token ? <button type="button" onClick={createReservation} disabled={isBooking}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => setIsAuthOpen(true)}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
         </div>
       )}
       {reservation && (
@@ -139,11 +163,13 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
           <strong>{statusTitle(reservation.status)}</strong>
           <span>Confirmation ID: {reservation.reservationId}</span>
           {reservation.status === 'pending' && <div className="booking-actions"><button type="button" onClick={() => payReservation(true)} disabled={isPaying || isCanceling}>{isPaying ? 'Processing payment...' : 'Pay now'}</button><button className="button-secondary" type="button" onClick={() => payReservation(false)} disabled={isPaying || isCanceling}>Decline test payment</button></div>}
+          {['pending', 'paid'].includes(reservation.status) && <Link href="/reservations">View my reservations</Link>}
+          {['rejected', 'canceled'].includes(reservation.status) && <button type="button" onClick={bookAnother}>Book another stay</button>}
           {['pending', 'paid'].includes(reservation.status) && <button className="button-secondary" type="button" onClick={cancelReservation} disabled={isPaying || isCanceling}>{isCanceling ? 'Canceling...' : 'Cancel reservation'}</button>}
         </div>
       )}
       {error && <p className="booking-error" role="alert">{error}</p>}
-      {!token && <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
+      <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </section>
   );
 }
@@ -159,9 +185,11 @@ function statusTitle(status: string): string {
 
 function messageForError(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.isUnauthorized) return 'Please sign in before checking availability or booking a stay.';
-    if (error.isConflict) return 'This room was just booked by someone else. Re-check availability and try again.';
+    if (error.isUnauthorized) return 'Your session has expired or you are signed out. Sign in to continue; your dates are kept.';
+    if (error.isConflict) return 'These rooms just sold out. Re-check availability or pick other dates.';
+    if (error.status === 422) return `Some booking details are not valid: ${error.message}`;
+    if (error.status >= 500) return 'The booking service had a problem. Try again; retrying will not create a duplicate booking.';
     return error.message;
   }
-  return 'We could not complete that request. Please try again.';
+  return 'Network problem: we could not reach the server. Try again; retrying will not create a duplicate booking.';
 }
