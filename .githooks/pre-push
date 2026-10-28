@@ -14,6 +14,11 @@ composer test || {
 
 echo "pre-push: running npm test..."
 cd "$root/frontend"
+# Git GUIs run hooks without a login shell, so nvm-managed node is not on PATH.
+if ! command -v npm >/dev/null 2>&1 && [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
+    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+    . "$NVM_DIR/nvm.sh" >/dev/null 2>&1 || true
+fi
 npm test || {
     echo "pre-push: npm test failed. Fix the tests or bypass with --no-verify." >&2
     exit 1
