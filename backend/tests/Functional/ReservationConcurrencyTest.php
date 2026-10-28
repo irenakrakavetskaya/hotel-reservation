@@ -161,6 +161,43 @@ final class ReservationConcurrencyTest extends WebTestCase
         );
     }
 
+    public function testForeignKeyRejectsReservationForUnknownUser(): void
+    {
+        ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedInventory(totalInventory: 5, totalReserved: 0);
+
+        $this->expectException(\Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException::class);
+        $this->insertReservation(Uuid::v7()->toRfc4122(), 999999, $hotelId, $roomTypeId);
+    }
+
+    public function testForeignKeyRestrictsDeletingUserWithReservations(): void
+    {
+        ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedInventory(totalInventory: 5, totalReserved: 0);
+        $this->insertReservation(Uuid::v7()->toRfc4122(), 1, $hotelId, $roomTypeId);
+
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+
+        // Postgres reports RESTRICT as SQLSTATE 23001, which DBAL doesn't map to the FK exception.
+        $this->expectException(\Doctrine\DBAL\Exception\DriverException::class);
+        $this->expectExceptionMessage('fk_reservation_user');
+        $connection->executeStatement('DELETE FROM app_user WHERE id = 1');
+    }
+
+    private function insertReservation(string $id, int $userId, int $hotelId, int $roomTypeId): void
+    {
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+        $connection->executeStatement(
+            <<<'SQL'
+                INSERT INTO reservation
+                    (id, user_id, hotel_id, room_type_id, start_date, end_date, room_count, status, total_price, created_at, updated_at)
+                VALUES
+                    (:id, :userId, :hotelId, :roomTypeId, '2027-01-01', '2027-01-02', 1, 'pending', 1000, now(), now())
+                SQL,
+            ['id' => $id, 'userId' => $userId, 'hotelId' => $hotelId, 'roomTypeId' => $roomTypeId],
+        );
+    }
+
     /**
      * @param list<string> $reservationIds one entry per worker; repeat the
      *                                     same id to test concurrent idempotency
@@ -239,6 +276,11 @@ final class ReservationConcurrencyTest extends WebTestCase
     {
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
+
+        // Workers book as user id 1 (identity restarts after the TRUNCATE in setUp).
+        $connection->executeStatement(
+            "INSERT INTO app_user (email, roles, password) VALUES ('worker@example.com', '[]'::jsonb, 'x')",
+        );
 
         $connection->executeStatement(
             <<<'SQL'

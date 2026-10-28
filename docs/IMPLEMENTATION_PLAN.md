@@ -55,6 +55,8 @@ Pre-populated 2 years out by a scheduled job (Symfony Messenger + cron, or a `sy
 `id (= client-supplied reservationID, UUID), user_id, hotel_id, room_type_id, start_date, end_date, room_count, status, total_price, created_at, updated_at`
 `id` is the **primary key and the idempotency key** — no separate idempotency table needed.
 
+`user_id` references `app_user (id)` via `fk_reservation_user` with `ON DELETE RESTRICT`: users who hold reservations cannot be deleted, and direct writes cannot create orphaned reservations.
+
 `status` enum: `pending, paid, refunded, canceled, rejected`.
 
 ## 2. API surface
