@@ -45,7 +45,7 @@ CREATE TABLE room_type_inventory (
     total_inventory INT NOT NULL,
     total_reserved INT NOT NULL DEFAULT 0,
     PRIMARY KEY (hotel_id, room_type_id, date),
-    CONSTRAINT check_room_count CHECK (total_reserved <= (total_inventory * 1.1)::int)
+    CONSTRAINT check_room_count CHECK (total_reserved * 10 <= total_inventory * 11)
 );
 ```
 

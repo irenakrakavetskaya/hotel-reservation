@@ -59,7 +59,7 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
 
         $result = [];
         foreach ($rows as $row) {
-            $maxReservable = (int) ($row['total_inventory'] * 1.1);
+            $maxReservable = RoomTypeInventory::overbookingCeiling((int) $row['total_inventory']);
             $availableRooms = max(0, $maxReservable - (int) $row['total_reserved']);
             $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, (string) $row['date']));
             $cacheItem->set($availableRooms);
@@ -120,7 +120,7 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
         }
 
         foreach ($availability as $day) {
-            $ceiling = (int) ($day['total_inventory'] * 1.1);
+            $ceiling = RoomTypeInventory::overbookingCeiling((int) $day['total_inventory']);
             if ($day['total_reserved'] + $roomCount > $ceiling) {
                 return false;
             }
@@ -156,7 +156,7 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
         );
 
         if (false !== $row) {
-            $maxReservable = (int) (((int) $row['total_inventory']) * 1.1);
+            $maxReservable = RoomTypeInventory::overbookingCeiling((int) $row['total_inventory']);
             $availableRooms = max(0, $maxReservable - (int) $row['total_reserved']);
             $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, (string) $row['date']));
             $cacheItem->set($availableRooms);

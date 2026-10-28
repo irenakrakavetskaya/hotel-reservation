@@ -9,6 +9,7 @@ use App\Domain\Hotel\Repository\RoomTypeRepository;
 use App\Domain\Rate\Repository\RoomTypeRateRepository;
 use App\Domain\Reservation\Dto\AvailabilityQueryRequest;
 use App\Domain\Reservation\Dto\AvailabilityResponse;
+use App\Domain\Reservation\Entity\RoomTypeInventory;
 use App\Domain\Reservation\Repository\RoomTypeInventoryRepository;
 use App\Infrastructure\Cache\CacheScopes;
 use App\Infrastructure\Cache\ReadCacheVersionService;
@@ -118,7 +119,7 @@ final class AvailabilityQueryService
                 continue;
             }
 
-            $maxReservable = (int) ($inventory['total_inventory'] * 1.1);
+            $maxReservable = RoomTypeInventory::overbookingCeiling((int) $inventory['total_inventory']);
             $availableRooms = max(0, $maxReservable - $inventory['total_reserved']);
 
             if ($availableRooms < $roomCount) {

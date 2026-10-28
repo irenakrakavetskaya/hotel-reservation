@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use Doctrine\DBAL\Connection;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Uid\Uuid;
 
@@ -73,7 +74,7 @@ final class ReservationConcurrencyTest extends WebTestCase
 
         $finalTotalReserved = $this->totalReservedFor($hotelId, $roomTypeId, '2027-03-01');
         self::assertSame($expectedCeiling, $finalTotalReserved);
-        self::assertLessThanOrEqual((int) (10 * 1.1), $finalTotalReserved, 'The DB constraint must never be violated, even under concurrency.');
+        self::assertLessThanOrEqual(intdiv(10 * 11, 10), $finalTotalReserved, 'The DB constraint must never be violated, even under concurrency.');
 
         self::assertSame($expectedCeiling, $this->reservationCount());
     }
@@ -109,6 +110,55 @@ final class ReservationConcurrencyTest extends WebTestCase
 
         self::assertSame(1, $this->reservationCount());
         self::assertSame(1, $this->totalReservedFor($hotelId, $roomTypeId, '2027-04-01'));
+    }
+
+    /**
+     * @return iterable<string, array{int, int, int}>
+     */
+    public static function fractionalCeilingProvider(): iterable
+    {
+        // [totalInventory, alreadyReserved, expectedFinalReserved]
+        yield 'inventory 5 (5.5 must floor to 5)' => [5, 4, 5];
+        yield 'inventory 15 (16.5 must floor to 16)' => [15, 14, 16];
+        yield 'inventory 1 (1.1 floors to 1)' => [1, 0, 1];
+    }
+
+    #[DataProvider('fractionalCeilingProvider')]
+    public function testFractionalCeilingIsFlooredUnderConcurrency(int $totalInventory, int $alreadyReserved, int $expectedFinal): void
+    {
+        ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedInventory(totalInventory: $totalInventory, totalReserved: $alreadyReserved);
+
+        $workerCount = 6;
+        $reservationIds = [];
+        for ($i = 0; $i < $workerCount; ++$i) {
+            $reservationIds[] = Uuid::v7()->toRfc4122();
+        }
+
+        $results = $this->runConcurrently($reservationIds, $hotelId, $roomTypeId, '2027-03-01', '2027-03-02', 1);
+
+        $expectedSuccess = $expectedFinal - $alreadyReserved;
+        self::assertSame(0, $results['other']);
+        self::assertSame($expectedSuccess, $results['success']);
+        self::assertSame($workerCount - $expectedSuccess, $results['conflict']);
+        self::assertSame($expectedFinal, $this->totalReservedFor($hotelId, $roomTypeId, '2027-03-01'));
+    }
+
+    /**
+     * The constraint is the guarantee: a direct write past the floored
+     * ceiling must be rejected even when the app check is bypassed.
+     */
+    public function testConstraintRejectsRoundedUpCeiling(): void
+    {
+        ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedInventory(totalInventory: 5, totalReserved: 5);
+
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+
+        $this->expectException(\Doctrine\DBAL\Exception\DriverException::class);
+        $connection->executeStatement(
+            'UPDATE room_type_inventory SET total_reserved = 6 WHERE hotel_id = :h AND room_type_id = :r',
+            ['h' => $hotelId, 'r' => $roomTypeId],
+        );
     }
 
     /**

@@ -281,7 +281,7 @@ final class ReservationControllerTest extends WebTestCase
     {
         $client = $this->client;
         ['token' => $token] = $this->createAuthenticatedUser('overbook@example.com');
-        // total_inventory=10 => ceiling (10*1.1)::int = 11, already fully booked.
+        // total_inventory=10 => ceiling floor(10*1.1) = 11, already fully booked.
         ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedBookableRoomType(
             totalInventory: 10,
             totalReserved: 11,

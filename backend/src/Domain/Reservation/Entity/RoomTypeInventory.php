@@ -89,6 +89,15 @@ class RoomTypeInventory
     }
 
     /**
+     * floor(totalInventory * 1.1) in exact integer math, matching the
+     * `check_room_count` DB constraint (total_reserved * 10 <= total_inventory * 11).
+     */
+    public static function overbookingCeiling(int $totalInventory): int
+    {
+        return intdiv($totalInventory * 11, 10);
+    }
+
+    /**
      * Overbooking ceiling mirrored from the `check_room_count` DB constraint,
      * for fast-fail UX only (e.g. showing "sold out" before a form submit).
      * This is NOT the correctness guarantee — the DB constraint is. See
@@ -96,7 +105,7 @@ class RoomTypeInventory
      */
     public function getAvailableCount(): int
     {
-        $ceiling = (int) ($this->totalInventory * 1.1);
+        $ceiling = self::overbookingCeiling($this->totalInventory);
 
         return max(0, $ceiling - $this->totalReserved);
     }
