@@ -12,6 +12,7 @@ use App\Domain\Hotel\Exception\RoomTypeNotFoundException;
 use App\Domain\Hotel\Exception\RoomTypeResourceNotFoundException;
 use App\Domain\Reservation\Exception\ReservationCancellationConflictException;
 use App\Domain\Reservation\Exception\InsufficientInventoryException;
+use App\Domain\Reservation\Exception\InventoryCapacityConflictException;
 use App\Domain\Reservation\Exception\ReservationNotFoundException;
 use App\Domain\User\Exception\RoleChangeNotAllowedException;
 use App\Domain\User\Exception\UserAlreadyExistsException;
@@ -38,6 +39,7 @@ final class DomainExceptionListener
 
         $status = match (true) {
             $exception instanceof InsufficientInventoryException => Response::HTTP_CONFLICT,
+            $exception instanceof InventoryCapacityConflictException => Response::HTTP_CONFLICT,
             $exception instanceof ReservationCancellationConflictException => Response::HTTP_CONFLICT,
             $exception instanceof ReservationNotFoundException => Response::HTTP_NOT_FOUND,
             $exception instanceof ReservationPaymentStateException => Response::HTTP_CONFLICT,

@@ -9,7 +9,9 @@ use App\Domain\Hotel\Entity\RoomType;
 use App\Domain\Hotel\Exception\HotelNotFoundException;
 use App\Domain\Hotel\Exception\RoomTypeResourceNotFoundException;
 use App\Domain\Hotel\Repository\RoomTypeRepository;
+use App\Domain\Reservation\Service\InventoryReconciler;
 use App\Infrastructure\Cache\CacheScopes;
+use Doctrine\DBAL\Connection;
 use App\Infrastructure\Cache\ReadCacheVersionService;
 
 /**
@@ -22,6 +24,8 @@ final class RoomTypeService
         private readonly RoomTypeRepository $roomTypeRepository,
         private readonly HotelService $hotelService,
         private readonly ReadCacheVersionService $cacheVersions,
+        private readonly InventoryReconciler $inventoryReconciler,
+        private readonly Connection $connection,
     ) {}
 
     /** @return list<RoomType> */
@@ -58,7 +62,19 @@ final class RoomTypeService
             amenities: $request->amenities,
         );
 
-        $this->roomTypeRepository->save($roomType);
+        // Create the inventory window up front so the new type is bookable
+        // (and priced) without waiting for a manual backfill.
+        $this->connection->beginTransaction();
+
+        try {
+            $this->roomTypeRepository->save($roomType);
+            $this->inventoryReconciler->reconcileRoomType($hotelId, (int) $roomType->getId());
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            $this->connection->rollBack();
+            throw $e;
+        }
+
         $this->cacheVersions->bump(CacheScopes::roomTypeRead($hotelId));
 
         return $roomType;

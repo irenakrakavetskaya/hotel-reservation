@@ -32,7 +32,7 @@ final class RoomRequest
         return array_map(static fn(RoomStatus $s) => $s->value, RoomStatus::cases());
     }
 
-    public function getStatus(): RoomStatus
+    public function toStatus(): RoomStatus
     {
         return RoomStatus::from($this->status);
     }

@@ -15,6 +15,9 @@ use App\Domain\Hotel\Repository\RoomRepository;
 use App\Domain\Hotel\Repository\RoomTypeRepository;
 use App\Infrastructure\Cache\CacheScopes;
 use App\Infrastructure\Cache\ReadCacheVersionService;
+use App\Domain\Reservation\Exception\InventoryCapacityConflictException;
+use App\Domain\Reservation\Service\InventoryReconciler;
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 /**
@@ -29,6 +32,8 @@ final class RoomService
         private readonly RoomTypeRepository $roomTypeRepository,
         private readonly HotelService $hotelService,
         private readonly ReadCacheVersionService $cacheVersions,
+        private readonly InventoryReconciler $inventoryReconciler,
+        private readonly Connection $connection,
     ) {}
 
     /** @return list<Room> */
@@ -58,6 +63,7 @@ final class RoomService
      * @throws HotelNotFoundException
      * @throws RoomTypeNotFoundException
      * @throws DuplicateRoomNumberException
+     * @throws InventoryCapacityConflictException
      */
     public function createRoom(int $hotelId, RoomRequest $request): Room
     {
@@ -65,9 +71,12 @@ final class RoomService
         $roomType = $this->resolveRoomType($hotelId, $request->roomTypeId);
 
         $room = new Room($hotel, $roomType, $request->roomNumber, $request->floor);
-        $room->setStatus($request->getStatus());
+        $room->setStatus($request->toStatus());
 
-        $this->saveOrThrowOnDuplicate($room, $hotelId, $request->roomNumber);
+        $this->inTransaction(function () use ($room, $hotelId, $request): void {
+            $this->saveOrThrowOnDuplicate($room, $hotelId, $request->roomNumber);
+            $this->inventoryReconciler->reconcileRoomType($hotelId, (int) $room->getRoomType()->getId());
+        });
         $this->cacheVersions->bump(CacheScopes::roomRead($hotelId));
 
         return $room;
@@ -77,26 +86,55 @@ final class RoomService
      * @throws RoomNotFoundException
      * @throws RoomTypeNotFoundException
      * @throws DuplicateRoomNumberException
+     * @throws InventoryCapacityConflictException
      */
     public function updateRoom(int $hotelId, int $id, RoomRequest $request): Room
     {
         $room = $this->getRoom($hotelId, $id);
         $roomType = $this->resolveRoomType($hotelId, $request->roomTypeId);
 
-        $room->update($roomType, $request->roomNumber, $request->floor, $request->getStatus());
+        $previousRoomTypeId = (int) $room->getRoomType()->getId();
+        $room->update($roomType, $request->roomNumber, $request->floor, $request->toStatus());
 
-        $this->saveOrThrowOnDuplicate($room, $hotelId, $request->roomNumber);
+        $this->inTransaction(function () use ($room, $hotelId, $request, $previousRoomTypeId): void {
+            $this->saveOrThrowOnDuplicate($room, $hotelId, $request->roomNumber);
+            $this->inventoryReconciler->reconcileRoomType($hotelId, $previousRoomTypeId);
+            $newRoomTypeId = (int) $room->getRoomType()->getId();
+            if ($newRoomTypeId !== $previousRoomTypeId) {
+                $this->inventoryReconciler->reconcileRoomType($hotelId, $newRoomTypeId);
+            }
+        });
         $this->cacheVersions->bump(CacheScopes::roomRead($hotelId));
 
         return $room;
     }
 
-    /** @throws RoomNotFoundException */
+    /**
+     * @throws RoomNotFoundException
+     * @throws InventoryCapacityConflictException
+     */
     public function deleteRoom(int $hotelId, int $id): void
     {
         $room = $this->getRoom($hotelId, $id);
-        $this->roomRepository->remove($room);
+        $roomTypeId = (int) $room->getRoomType()->getId();
+        $this->inTransaction(function () use ($room, $hotelId, $roomTypeId): void {
+            $this->roomRepository->remove($room);
+            $this->inventoryReconciler->reconcileRoomType($hotelId, $roomTypeId);
+        });
         $this->cacheVersions->bump(CacheScopes::roomRead($hotelId));
+    }
+
+    private function inTransaction(callable $work): void
+    {
+        $this->connection->beginTransaction();
+
+        try {
+            $work();
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            $this->connection->rollBack();
+            throw $e;
+        }
     }
 
     /** @throws RoomTypeNotFoundException */

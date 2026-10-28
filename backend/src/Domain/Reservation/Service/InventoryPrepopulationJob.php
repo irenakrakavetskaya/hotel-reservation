@@ -33,7 +33,7 @@ use Psr\Log\LoggerInterface;
 final class InventoryPrepopulationJob
 {
     /** ~2 years — matches RateRecomputeJob's pricing window. */
-    private const WINDOW_DAYS = 730;
+    public const WINDOW_DAYS = 730;
 
     public function __construct(
         private readonly RoomTypeRepository $roomTypeRepository,

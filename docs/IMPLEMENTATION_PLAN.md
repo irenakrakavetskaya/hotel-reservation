@@ -248,3 +248,13 @@ Run backend tests against the **test** database only (they truncate tables):
 `APP_ENV=test` with `DATABASE_URL` pointing at `hotel_reservations_test`. If
 tests run in the container, remove the www-data-owned `var/cache/test`
 afterwards, or host-side `composer test` (used by the pre-push hook) fails.
+
+## Inventory sync on room changes
+
+Room create/update/delete (including moving a room between room types or
+changing its status) and room-type creation reconcile `room_type_inventory.total_inventory`
+for the affected room type(s) over today → +730 days, in the same DB
+transaction as the room change (`InventoryReconciler`). `total_reserved` and
+past dates are never touched. If the new capacity would fall below what
+future reservations already hold, the `check_room_count` constraint rejects
+it and the API returns 409 with nothing changed.
