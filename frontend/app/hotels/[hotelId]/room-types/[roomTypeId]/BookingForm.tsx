@@ -143,7 +143,7 @@ export default function BookingForm({ hotel, roomType, isSignedIn, initialStartD
         </label>
         <label>
           Rooms
-          <input type="number" min="1" max={roomType.maxOccupancy} value={roomCount} onChange={(event) => editStay(() => setRoomCount(Number(event.target.value)))} required />
+          <input type="number" min="1" value={roomCount} onChange={(event) => editStay(() => setRoomCount(Number(event.target.value)))} required />
         </label>
         <button type="submit" disabled={isChecking || isBooking}>{isChecking ? 'Checking availability...' : availability ? 'Re-check availability' : 'Check availability'}</button>
       </form>

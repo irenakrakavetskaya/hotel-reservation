@@ -124,6 +124,24 @@ describe('BookingForm', () => {
     expect(ids[0]).not.toBe(ids[1]);
   });
 
+  it('does not cap the room count at the guest occupancy of the room type', async () => {
+    const small = { ...roomType, maxOccupancy: 2 } as RoomType;
+    api.availability.mockResolvedValue(available);
+    api.createReservation.mockResolvedValue(reservation('pending'));
+    renderForm({ roomType: small });
+
+    const rooms = screen.getByLabelText(/Rooms/) as HTMLInputElement;
+    expect(rooms).not.toHaveAttribute('max');
+    await userEvent.clear(rooms);
+    await userEvent.type(rooms, '3');
+    await userEvent.click(screen.getByRole('button', { name: 'Check availability' }));
+    expect(api.availability).toHaveBeenCalledWith(3, 2, '2026-12-01', '2026-12-04', 3);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Book this stay' }));
+    await screen.findByText('Reservation confirmed. Payment is pending.');
+    expect(api.createReservation.mock.calls[0][0]).toMatchObject({ roomCount: 3 });
+  });
+
   it('shows a sold-out message on 409', async () => {
     api.createReservation.mockRejectedValue(new ApiError(409, 'Not enough inventory', null));
     renderForm();
