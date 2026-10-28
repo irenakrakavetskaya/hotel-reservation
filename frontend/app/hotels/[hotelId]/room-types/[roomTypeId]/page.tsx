@@ -47,7 +47,7 @@ export default async function RoomTypeDetailPage({ params }: RoomTypePageProps) 
           <p>Up to {roomType.maxOccupancy} guests</p>
         </aside>
       </section>
-      <BookingForm hotel={hotel} roomType={roomType} token={await getAccessToken()} />
+      <BookingForm hotel={hotel} roomType={roomType} isSignedIn={Boolean(await getAccessToken())} />
     </main>
   );
 }

@@ -9,7 +9,8 @@ const api = vi.hoisted(() => ({ availability: vi.fn(), createReservation: vi.fn(
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock('../../../../../../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../../../lib/api')>()),
-  hotelApi: api,
+  hotelApi: { availability: api.availability },
+  customerApi: { createReservation: api.createReservation, payReservation: api.payReservation, cancelReservation: api.cancelReservation },
 }));
 
 const hotel = { id: 3, name: 'Northline House' } as Hotel;
@@ -22,7 +23,7 @@ function reservation(status: string, id = 'res-1'): Reservation {
 
 function renderForm(props: Partial<React.ComponentProps<typeof BookingForm>> = {}) {
   return render(
-    <BookingForm hotel={hotel} roomType={roomType} token="jwt" initialStartDate="2026-12-01" initialEndDate="2026-12-04" initialRoomCount={1} initialAvailability={available} {...props} />,
+    <BookingForm hotel={hotel} roomType={roomType} isSignedIn initialStartDate="2026-12-01" initialEndDate="2026-12-04" initialRoomCount={1} initialAvailability={available} {...props} />,
   );
 }
 
@@ -55,10 +56,9 @@ describe('BookingForm', () => {
     await userEvent.click(book());
 
     expect(await screen.findByText('Reservation confirmed. Payment is pending.')).toBeInTheDocument();
-    const [input, token] = api.createReservation.mock.calls[0];
+    const [input] = api.createReservation.mock.calls[0];
     expect(input).toMatchObject({ hotelID: 3, roomTypeID: 2, startDate: '2026-12-01', endDate: '2026-12-04', roomCount: 1 });
     expect(input.reservationID).toMatch(/^[0-9a-f-]{36}$/);
-    expect(token).toBe('jwt');
     expect(screen.getByRole('link', { name: 'View my reservations' })).toHaveAttribute('href', '/reservations');
   });
 
@@ -152,7 +152,7 @@ describe('BookingForm', () => {
   });
 
   it('asks signed-out users to sign in instead of booking', async () => {
-    renderForm({ token: null });
+    renderForm({ isSignedIn: false });
     expect(screen.queryByRole('button', { name: 'Book this stay' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Sign in to book/ }));
     expect(screen.getByRole('dialog')).toHaveAttribute('open');
@@ -173,7 +173,7 @@ describe('BookingForm', () => {
     await userEvent.click(book());
     await userEvent.click(await screen.findByRole('button', { name: 'Pay now' }));
     expect(await screen.findByText('Payment successful. Reservation confirmed.')).toBeInTheDocument();
-    expect(api.payReservation).toHaveBeenCalledWith('res-1', true, 'jwt');
+    expect(api.payReservation).toHaveBeenCalledWith('res-1', true);
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel reservation' }));
     expect(await screen.findByText('Reservation canceled.')).toBeInTheDocument();

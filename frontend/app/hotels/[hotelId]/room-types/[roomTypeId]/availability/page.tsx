@@ -42,7 +42,7 @@ export default async function AvailabilityPage({ params, searchParams }: Availab
   return (
     <main className="page-shell page-shell--compact">
       <header className="page-heading"><p className="eyebrow">Live availability</p><h1>Check your dates before you book.</h1><p className="intro">Availability is checked against the latest inventory when you submit the form.</p></header>
-      <BookingForm hotel={hotel} roomType={roomType} token={token} initialStartDate={initialStartDate} initialEndDate={initialEndDate} initialRoomCount={initialRoomCount} initialAvailability={availability} />
+      <BookingForm hotel={hotel} roomType={roomType} isSignedIn={Boolean(token)} initialStartDate={initialStartDate} initialEndDate={initialEndDate} initialRoomCount={initialRoomCount} initialAvailability={availability} />
     </main>
   );
 }

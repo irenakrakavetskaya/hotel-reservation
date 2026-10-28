@@ -179,6 +179,11 @@ Design decisions:
   POST/PUT/DELETE, attaches the Bearer token from the HttpOnly cookie (the
   token is never exposed to client JS) and calls `revalidatePath('/hotels',
   'layout')` on success so the `revalidate: 60` public pages refresh.
+- **Customer mutations** (`customerApi` in `lib/api.ts`: create/cancel reservation,
+  payment) use the same pattern via `app/api/customer/[...path]/route.ts`, which
+  allows only `POST reservations|payments` and `DELETE reservations/{uuid}`.
+  Server pages pass client components `isSignedIn`, never the JWT; availability
+  checks are public and sent without a token.
 - **Forms.** `components/admin/AdminForm.tsx` is driven by a `resource` key
   (`hotel | roomType | room`) with field definitions and mappers in
   `lib/admin-forms.ts` (prices entered in dollars, sent as integer cents).

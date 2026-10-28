@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ApiError, hotelApi, type Reservation } from '../../lib/api';
+import { ApiError, customerApi, type Reservation } from '../../lib/api';
 
-export default function ReservationCard({ initialReservation, token }: { initialReservation: Reservation; token: string | null }) {
+export default function ReservationCard({ initialReservation }: { initialReservation: Reservation }) {
   const [reservation, setReservation] = useState(initialReservation);
   const [isCanceling, setIsCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +12,7 @@ export default function ReservationCard({ initialReservation, token }: { initial
     setError(null);
     setIsCanceling(true);
     try {
-      setReservation(await hotelApi.cancelReservation(reservation.reservationId, token));
+      setReservation(await customerApi.cancelReservation(reservation.reservationId));
     } catch (requestError) {
       setError(requestError instanceof ApiError ? requestError.message : 'Could not cancel this reservation.');
     } finally {

@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import AuthModal from '../../../../../components/AuthModal';
 import { clearReservationKey, getOrCreateReservationKey } from '../../../../../lib/reservation-key';
-import { ApiError, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
+import { ApiError, customerApi, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
 
 type BookingFormProps = {
   hotel: Hotel;
   roomType: RoomType;
-  token: string | null;
+  isSignedIn: boolean;
   initialStartDate?: string;
   initialEndDate?: string;
   initialRoomCount?: number;
@@ -29,7 +29,7 @@ function formatPrice(priceInCents: number | null): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(priceInCents / 100);
 }
 
-export default function BookingForm({ hotel, roomType, token, initialStartDate, initialEndDate, initialRoomCount, initialAvailability }: BookingFormProps) {
+export default function BookingForm({ hotel, roomType, isSignedIn, initialStartDate, initialEndDate, initialRoomCount, initialAvailability }: BookingFormProps) {
   const [startDate, setStartDate] = useState(initialStartDate ?? dateAfter(7));
   const [endDate, setEndDate] = useState(initialEndDate ?? dateAfter(9));
   const [roomCount, setRoomCount] = useState(initialRoomCount ?? 1);
@@ -49,7 +49,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
     setIsChecking(true);
 
     try {
-      const result = await hotelApi.availability(hotel.id, roomType.id, startDate, endDate, roomCount, token);
+      const result = await hotelApi.availability(hotel.id, roomType.id, startDate, endDate, roomCount);
       setAvailability(result);
       if (!result.canBook) setError(`Only ${result.minAvailableRooms} room${result.minAvailableRooms === 1 ? '' : 's'} available for these dates.`);
     } catch (requestError) {
@@ -69,14 +69,14 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
     setIsBooking(true);
 
     try {
-      const result = await hotelApi.createReservation({
+      const result = await customerApi.createReservation({
         reservationID: reservationId,
         hotelID: hotel.id,
         roomTypeID: roomType.id,
         startDate,
         endDate,
         roomCount,
-      }, token);
+      });
       clearReservationKey(stay);
       setReservation(result);
     } catch (requestError) {
@@ -106,7 +106,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
     setIsPaying(true);
 
     try {
-      setReservation(await hotelApi.payReservation(reservation.reservationId, approved, token));
+      setReservation(await customerApi.payReservation(reservation.reservationId, approved));
     } catch (requestError) {
       setError(messageForError(requestError));
     } finally {
@@ -120,7 +120,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
     setIsCanceling(true);
 
     try {
-      setReservation(await hotelApi.cancelReservation(reservation.reservationId, token));
+      setReservation(await customerApi.cancelReservation(reservation.reservationId));
     } catch (requestError) {
       setError(messageForError(requestError));
     } finally {
@@ -155,7 +155,7 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
             <span>{hotel.name} · {roomType.name}</span>
             <span>{startDate} → {endDate} · {availability.nights} night{availability.nights === 1 ? '' : 's'} · {roomCount} room{roomCount === 1 ? '' : 's'}</span>
           </div>
-          {token ? <button type="button" onClick={createReservation} disabled={isBooking}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => setIsAuthOpen(true)}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
+          {isSignedIn ? <button type="button" onClick={createReservation} disabled={isBooking}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => setIsAuthOpen(true)}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
         </div>
       )}
       {reservation && (

@@ -108,6 +108,7 @@ export class ApiError extends Error {
 
 type ApiFetchOptions = Omit<RequestInit, 'headers'> & {
   token?: string | null;
+  baseUrl?: string;
   headers?: HeadersInit;
 };
 
@@ -139,7 +140,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     headers.set('Authorization', `Bearer ${options.token}`);
   }
 
-  const response = await fetch(`${apiBaseUrl()}${path}`, {
+  const response = await fetch(`${options.baseUrl ?? apiBaseUrl()}${path}`, {
     ...options,
     headers,
   });
@@ -169,13 +170,22 @@ export const hotelApi = {
   getRoomType(hotelId: number, roomTypeId: number, token?: string | null) {
     return apiFetch<RoomType>(`/hotels/${hotelId}/room-types/${roomTypeId}`, { token, next: { revalidate: 60 } });
   },
-  availability(hotelId: number, roomTypeId: number, startDate: string, endDate: string, roomCount: number, token?: string | null) {
+  availability(hotelId: number, roomTypeId: number, startDate: string, endDate: string, roomCount: number) {
     const query = new URLSearchParams({ startDate, endDate, roomCount: String(roomCount) });
     return apiFetch<Availability>(`/hotels/${hotelId}/room-types/${roomTypeId}/availability?${query}`, {
-      token,
       cache: 'no-store',
     });
   },
+  listReservations(token?: string | null) {
+    return apiFetch<Reservation[]>('/reservations', { token, cache: 'no-store' });
+  },
+};
+
+// Browser-side calls go through the same-origin proxy (app/api/customer), which
+// attaches the HttpOnly session cookie's token server-side.
+const CUSTOMER_PROXY = '/api/customer';
+
+export const customerApi = {
   createReservation(input: {
     reservationID: string;
     hotelID: number;
@@ -183,27 +193,24 @@ export const hotelApi = {
     startDate: string;
     endDate: string;
     roomCount: number;
-  }, token?: string | null) {
+  }) {
     return apiFetch<Reservation>('/reservations', {
+      baseUrl: CUSTOMER_PROXY,
       method: 'POST',
-      token,
       body: JSON.stringify(input),
     });
   },
-  listReservations(token?: string | null) {
-    return apiFetch<Reservation[]>('/reservations', { token, cache: 'no-store' });
-  },
-  payReservation(reservationId: string, approved: boolean, token?: string | null) {
+  payReservation(reservationId: string, approved: boolean) {
     return apiFetch<Reservation>('/payments', {
+      baseUrl: CUSTOMER_PROXY,
       method: 'POST',
-      token,
       body: JSON.stringify({ reservationID: reservationId, approved }),
     });
   },
-  cancelReservation(reservationId: string, token?: string | null) {
+  cancelReservation(reservationId: string) {
     return apiFetch<Reservation>(`/reservations/${reservationId}`, {
+      baseUrl: CUSTOMER_PROXY,
       method: 'DELETE',
-      token,
     });
   },
 };
