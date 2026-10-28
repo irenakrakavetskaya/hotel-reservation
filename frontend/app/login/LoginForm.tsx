@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import PasswordToggle from '../../components/PasswordToggle';
+import { hardNavigate } from '../../lib/navigation';
 import { parseApiError, validateEmail, validateLoginPassword, type FieldErrors } from '../../lib/auth-validation';
 
 type LoginFormProps = { onSuccess?: () => void; initialEmail?: string; focusPassword?: boolean };
@@ -51,9 +52,10 @@ export default function LoginForm({ onSuccess, initialEmail = '', focusPassword 
         setServerErrors(parsed.fieldErrors);
         return;
       }
-      router.refresh();
-      if (onSuccess) onSuccess();
-      else router.push('/reservations');
+      if (onSuccess) {
+        onSuccess();
+        router.refresh();
+      } else hardNavigate('/reservations');
     } catch {
       setError('Network problem: check your connection and try again.');
     } finally {

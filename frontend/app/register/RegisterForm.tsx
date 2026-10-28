@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useId, useRef, useState } from 'react';
 import PasswordToggle from '../../components/PasswordToggle';
+import { hardNavigate } from '../../lib/navigation';
 import { parseApiError, validateConfirmation, validateEmail, validateNewPassword, type FieldErrors } from '../../lib/auth-validation';
 
 type RegisterFormProps = { onSuccess?: () => void; onEmailTaken?: (email: string) => void };
@@ -61,9 +62,10 @@ export default function RegisterForm({ onSuccess, onEmailTaken }: RegisterFormPr
         if (parsed.fieldErrors.email) emailRef.current?.focus();
         return;
       }
-      router.refresh();
-      if (onSuccess) onSuccess();
-      else router.push('/reservations');
+      if (onSuccess) {
+        onSuccess();
+        router.refresh();
+      } else hardNavigate('/reservations');
     } catch {
       setError('Network problem: check your connection and try again.');
     } finally {

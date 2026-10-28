@@ -5,6 +5,8 @@ import LoginForm from '../../../app/login/LoginForm';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('../../../lib/navigation', () => ({ hardNavigate: vi.fn() }));
+import { hardNavigate } from '../../../lib/navigation';
 
 function respond(status: number, body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status }));
@@ -65,9 +67,21 @@ describe('LoginForm', () => {
     await userEvent.type(screen.getByLabelText(/^Password/i), 'secret');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/reservations'));
+    // Full page load so the layout's AuthNav re-reads the new access_token cookie.
+    await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/reservations'));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'a@b.co', password: 'secret' });
-    expect(router.refresh).toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it('refreshes server components after an embedded sign-in so the nav updates', async () => {
+    respond(200, { user: {} });
+    render(<LoginForm onSuccess={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText(/^Email/i), 'a@b.co');
+    await userEvent.type(screen.getByLabelText(/^Password/i), 'secret');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(router.refresh).toHaveBeenCalled());
+    expect(hardNavigate).not.toHaveBeenCalled();
   });
 
   it('calls onSuccess instead of navigating when embedded', async () => {

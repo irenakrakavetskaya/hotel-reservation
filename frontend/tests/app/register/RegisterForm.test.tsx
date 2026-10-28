@@ -5,6 +5,8 @@ import RegisterForm from '../../../app/register/RegisterForm';
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('../../../lib/navigation', () => ({ hardNavigate: vi.fn() }));
+import { hardNavigate } from '../../../lib/navigation';
 
 function respond(status: number, body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status }));
@@ -64,7 +66,7 @@ describe('RegisterForm', () => {
     await fill('a@b.co', 'password1', 'password1');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/reservations'));
+    await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/reservations'));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ email: 'a@b.co', password: 'password1', passwordConfirmation: 'password1' });
   });
 
