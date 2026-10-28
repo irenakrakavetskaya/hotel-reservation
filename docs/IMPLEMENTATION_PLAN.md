@@ -248,6 +248,14 @@ changes apply without re-login.
 - **Concurrency test is the highest-value test in the whole system**: spin up N parallel `POST /v1/reservations` requests against a room type with `total_inventory=1` (or few) and assert exactly `total_inventory * 1.1` (rounded down) succeed, the rest get 409s, and the DB constraint is never violated even if the application logic has a bug.
 - Idempotency test: same `reservationID` submitted twice (sequentially and concurrently) → exactly one reservation row, same response both times.
 - Overbooking boundary test: exactly at 110% succeeds, one more fails.
+- Fractional-ceiling boundaries: concurrency cases where `total_inventory * 1.1`
+  is not an integer (5, 9, 11, 15, 19) must floor, plus multi-night all-or-nothing.
+- Hotel/room CRUD (`HotelControllerTest`, `RoomControllerTest`): staff-only writes
+  (401/403), validation (422), cross-hotel 404/422, duplicate room number 409, and
+  409 when deleting a hotel or room type that still has reservations.
+- Jobs (`InventoryPrepopulationJobTest`, `RateRecomputeJobTest`): backfill/daily
+  extension idempotency, `total_reserved` untouched, occupancy-based pricing, and
+  skipping incomplete inventory windows.
 - Admin/role tests: only admins can list users and change roles, the last admin
   cannot be demoted, plain users get 403/404 on `/admin` and the proxy.
 

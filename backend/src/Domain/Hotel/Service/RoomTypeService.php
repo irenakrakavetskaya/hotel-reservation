@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Hotel\Service;
 
+use Doctrine\DBAL\Exception\DriverException;
+use App\Domain\Hotel\Exception\ResourceHasReservationsException;
 use App\Domain\Hotel\Dto\RoomTypeRequest;
 use App\Domain\Hotel\Entity\RoomType;
 use App\Domain\Hotel\Exception\HotelNotFoundException;
@@ -99,11 +101,22 @@ final class RoomTypeService
         return $roomType;
     }
 
-    /** @throws RoomTypeResourceNotFoundException */
+    /** @throws RoomTypeResourceNotFoundException
+     * @throws ResourceHasReservationsException
+     */
     public function deleteRoomType(int $hotelId, int $id): void
     {
         $roomType = $this->getRoomType($hotelId, $id);
-        $this->roomTypeRepository->remove($roomType);
+        try {
+            $this->roomTypeRepository->remove($roomType);
+        } catch (DriverException $e) {
+            // 23001 restrict_violation / 23503 foreign_key_violation
+            if (in_array($e->getSQLState(), ['23001', '23503'], true)) {
+                throw ResourceHasReservationsException::forRoomType($id, $e);
+            }
+
+            throw $e;
+        }
         $this->cacheVersions->bump(CacheScopes::roomTypeRead($hotelId));
     }
 }

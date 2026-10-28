@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Hotel\Service;
 
+use Doctrine\DBAL\Exception\DriverException;
+use App\Domain\Hotel\Exception\ResourceHasReservationsException;
 use App\Domain\Hotel\Dto\HotelRequest;
 use App\Domain\Hotel\Entity\Hotel;
 use App\Domain\Hotel\Exception\HotelNotFoundException;
@@ -79,7 +81,16 @@ final class HotelService
     public function deleteHotel(int $id): void
     {
         $hotel = $this->getHotel($id);
-        $this->hotelRepository->remove($hotel);
+        try {
+            $this->hotelRepository->remove($hotel);
+        } catch (DriverException $e) {
+            // 23001 restrict_violation / 23503 foreign_key_violation
+            if (in_array($e->getSQLState(), ['23001', '23503'], true)) {
+                throw ResourceHasReservationsException::forHotel($id, $e);
+            }
+
+            throw $e;
+        }
         $this->cacheVersions->bump(CacheScopes::hotelRead());
         $this->cacheVersions->bump(CacheScopes::roomRead($id));
         $this->cacheVersions->bump(CacheScopes::roomTypeRead($id));

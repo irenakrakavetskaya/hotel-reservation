@@ -7,6 +7,7 @@ namespace App\Infrastructure\EventListener;
 use App\Domain\Payment\Exception\ReservationPaymentStateException;
 use App\Domain\Hotel\Exception\DuplicateRoomNumberException;
 use App\Domain\Hotel\Exception\HotelNotFoundException;
+use App\Domain\Hotel\Exception\ResourceHasReservationsException;
 use App\Domain\Hotel\Exception\RoomNotFoundException;
 use App\Domain\Hotel\Exception\RoomTypeNotFoundException;
 use App\Domain\Hotel\Exception\RoomTypeResourceNotFoundException;
@@ -47,6 +48,7 @@ final class DomainExceptionListener
             $exception instanceof RoomNotFoundException => Response::HTTP_NOT_FOUND,
             $exception instanceof RoomTypeResourceNotFoundException => Response::HTTP_NOT_FOUND,
             $exception instanceof RoomTypeNotFoundException => Response::HTTP_UNPROCESSABLE_ENTITY,
+            $exception instanceof ResourceHasReservationsException => Response::HTTP_CONFLICT,
             $exception instanceof DuplicateRoomNumberException => Response::HTTP_CONFLICT,
             $exception instanceof UserAlreadyExistsException => Response::HTTP_CONFLICT,
             $exception instanceof UserNotFoundException => Response::HTTP_NOT_FOUND,

@@ -121,6 +121,10 @@ final class ReservationConcurrencyTest extends WebTestCase
         yield 'inventory 5 (5.5 must floor to 5)' => [5, 4, 5];
         yield 'inventory 15 (16.5 must floor to 16)' => [15, 14, 16];
         yield 'inventory 1 (1.1 floors to 1)' => [1, 0, 1];
+        yield 'inventory 2 (2.2 floors to 2)' => [2, 0, 2];
+        yield 'inventory 9 (9.9 must floor to 9, not round to 10)' => [9, 7, 9];
+        yield 'inventory 11 (12.1 floors to 12)' => [11, 10, 12];
+        yield 'inventory 19 (20.9 must floor to 20, not round to 21)' => [19, 18, 20];
     }
 
     #[DataProvider('fractionalCeilingProvider')]
@@ -141,6 +145,41 @@ final class ReservationConcurrencyTest extends WebTestCase
         self::assertSame($expectedSuccess, $results['success']);
         self::assertSame($workerCount - $expectedSuccess, $results['conflict']);
         self::assertSame($expectedFinal, $this->totalReservedFor($hotelId, $roomTypeId, '2027-03-01'));
+    }
+
+    /**
+     * Multi-night stays are all-or-nothing: with room on night 1 but none on
+     * night 2 (fractional ceiling), no request may succeed and night 1 must
+     * not leak a partial hold. With room on both nights exactly one wins.
+     */
+    public function testMultiNightStayIsAllOrNothingAtTheFractionalCeiling(): void
+    {
+        ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId] = $this->seedInventory(totalInventory: 5, totalReserved: 0);
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+        $connection->executeStatement(
+            <<<'SQL'
+                INSERT INTO room_type_inventory (hotel_id, room_type_id, date, total_inventory, total_reserved, updated_at)
+                VALUES
+                    (:h, :r, '2027-05-01', 5, 4, now()),
+                    (:h, :r, '2027-05-02', 5, 5, now()),
+                    (:h, :r, '2027-06-01', 5, 4, now()),
+                    (:h, :r, '2027-06-02', 5, 4, now())
+                SQL,
+            ['h' => $hotelId, 'r' => $roomTypeId],
+        );
+
+        $blocked = $this->runConcurrently([Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122()], $hotelId, $roomTypeId, '2027-05-01', '2027-05-03', 1);
+        self::assertSame(0, $blocked['success']);
+        self::assertSame(0, $blocked['other']);
+        self::assertSame(4, $this->totalReservedFor($hotelId, $roomTypeId, '2027-05-01'));
+        self::assertSame(5, $this->totalReservedFor($hotelId, $roomTypeId, '2027-05-02'));
+
+        $open = $this->runConcurrently([Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122(), Uuid::v7()->toRfc4122()], $hotelId, $roomTypeId, '2027-06-01', '2027-06-03', 1);
+        self::assertSame(1, $open['success']);
+        self::assertSame(2, $open['conflict']);
+        self::assertSame(5, $this->totalReservedFor($hotelId, $roomTypeId, '2027-06-01'));
+        self::assertSame(5, $this->totalReservedFor($hotelId, $roomTypeId, '2027-06-02'));
     }
 
     /**
