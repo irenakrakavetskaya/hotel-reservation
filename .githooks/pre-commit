@@ -17,6 +17,11 @@ fi
 if git diff --cached --name-only --diff-filter=ACMR | grep -q '^frontend/'; then
     echo "pre-commit: running npm run lint and npm run typecheck..."
     cd "$root/frontend"
+    # Git GUIs run hooks without a login shell, so nvm-managed node is not on PATH.
+    if ! command -v npm >/dev/null 2>&1 && [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
+        export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+        . "$NVM_DIR/nvm.sh" >/dev/null 2>&1 || true
+    fi
     npm run lint && npm run typecheck || {
         echo "pre-commit: frontend lint/typecheck failed. Fix the issues or bypass with --no-verify." >&2
         exit 1

@@ -28,6 +28,16 @@ remain trusted-provisioned.
 The Next.js frontend stores the returned JWT in an HttpOnly, SameSite=Lax
 cookie. Set `AUTH_COOKIE_SECURE=false` for local HTTP and `true` for HTTPS.
 
+Role management is admin-only (`ROLE_ADMIN`, which inherits `ROLE_STAFF` via
+`role_hierarchy`): `GET /v1/admin/users?search&limit&offset` and
+`PUT /v1/admin/users/{id}/roles` with `{"roles": ["ROLE_STAFF"]}`. The last
+admin cannot be demoted (409). Role changes take effect at the user's next
+login because roles are embedded in the JWT (1h TTL). Bootstrap the first admin
+with `php bin/console app:user:promote <email> --role=ROLE_ADMIN`.
+
+The frontend `/admin` area (staff/admin only, guarded server-side from the JWT)
+offers CRUD for hotels, room types and rooms, plus user roles for admins.
+
 Mock payment settlement is available at `POST /v1/payments` with body fields
 `reservationID` (UUID) and `approved` (boolean). It updates reservation status
 from `pending` to `paid` or `rejected`.

@@ -7,3 +7,9 @@ parameters:
         # Standalone CLI worker script for ReservationConcurrencyTest — a
         # framework-free fixture invoked via proc_open, not application code.
         - tests/Functional/Support/concurrent_reservation_worker.php
+    ignoreErrors:
+        # Doctrine assigns identity ids through reflection on hydration, which
+        # phpstan cannot see without the phpstan-doctrine extension.
+        -
+            identifier: property.onlyRead
+            path: src/Domain/*/Entity/*.php

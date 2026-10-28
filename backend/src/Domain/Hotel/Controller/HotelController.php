@@ -34,8 +34,7 @@ final class HotelController extends AbstractController
         private readonly HotelService $hotelService,
         private readonly CacheItemPoolInterface $cache,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /v1/hotels — list hotels, optionally filtered by ?city=.
@@ -58,7 +57,7 @@ final class HotelController extends AbstractController
         }
 
         $responses = HotelResponse::fromEntities($this->hotelService->listHotels($city));
-        $payload = array_map(static fn (HotelResponse $hotel): array => get_object_vars($hotel), $responses);
+        $payload = array_map(static fn(HotelResponse $hotel): array => get_object_vars($hotel), $responses);
 
         $cacheItem->set($payload);
         $cacheItem->expiresAfter(self::CACHE_TTL_SECONDS);
