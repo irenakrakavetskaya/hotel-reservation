@@ -11,6 +11,7 @@ use App\Domain\Reservation\Exception\InsufficientInventoryException;
 use App\Domain\Reservation\Exception\ReservationCancellationConflictException;
 use App\Domain\Reservation\Exception\ReservationNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Exception\DriverException;
 use Doctrine\DBAL\LockMode;
@@ -203,36 +204,9 @@ class ReservationRepository extends ServiceEntityRepository
                     ['status' => ReservationStatus::Canceled->value, 'id' => $id->toRfc4122()],
                 );
 
-                $updatedInventoryRows = $conn->executeStatement(
-                    <<<'SQL'
-                        UPDATE room_type_inventory
-                        SET total_reserved = total_reserved - :roomCount, updated_at = now()
-                        WHERE hotel_id = :hotelId
-                          AND room_type_id = :roomTypeId
-                          AND date >= :startDate
-                          AND date < :endDate
-                        SQL,
-                    [
-                        'roomCount' => (int) $row['room_count'],
-                        'hotelId' => (int) $row['hotel_id'],
-                        'roomTypeId' => (int) $row['room_type_id'],
-                        'startDate' => $row['start_date'],
-                        'endDate' => $row['end_date'],
-                    ],
-                );
-
-                $expectedNights = (new \DateTimeImmutable((string) $row['start_date']))
-                    ->diff(new \DateTimeImmutable((string) $row['end_date']))
-                    ->days;
-
-                if ($expectedNights !== $updatedInventoryRows) {
-                    throw ReservationCancellationConflictException::forRequest(
-                        (int) $row['hotel_id'],
-                        (int) $row['room_type_id'],
-                        new \DateTimeImmutable((string) $row['start_date']),
-                        new \DateTimeImmutable((string) $row['end_date']),
-                        (int) $row['room_count'],
-                    );
+                // A rejected reservation already released its inventory.
+                if (ReservationStatus::Rejected->value !== $row['status']) {
+                    $this->releaseInventory($conn, $row);
                 }
             }
             // else: already canceled — commit as a no-op, don't release
@@ -285,7 +259,7 @@ class ReservationRepository extends ServiceEntityRepository
 
         try {
             $row = $conn->fetchAssociative(
-                'SELECT status FROM reservation WHERE id = :id FOR UPDATE',
+                'SELECT * FROM reservation WHERE id = :id FOR UPDATE',
                 ['id' => $id->toRfc4122()],
             );
 
@@ -300,6 +274,11 @@ class ReservationRepository extends ServiceEntityRepository
                     'UPDATE reservation SET status = :status, updated_at = CURRENT_TIMESTAMP(0) WHERE id = :id',
                     ['status' => $requestedStatus->value, 'id' => $id->toRfc4122()],
                 );
+
+                // A declined payment must not keep holding rooms.
+                if (ReservationStatus::Rejected === $requestedStatus) {
+                    $this->releaseInventory($conn, $row);
+                }
             } elseif ($currentStatus !== $requestedStatus) {
                 throw ReservationPaymentStateException::forStatus($id, $currentStatus, $requestedStatus);
             }
@@ -313,5 +292,45 @@ class ReservationRepository extends ServiceEntityRepository
         $this->getEntityManager()->clear();
 
         return $this->find($id) ?? throw ReservationNotFoundException::forId($id);
+    }
+
+    /**
+     * @param array<string, mixed> $row reservation row (hotel_id, room_type_id, start_date, end_date, room_count)
+     *
+     * @throws ReservationCancellationConflictException when not every night's inventory row was updated
+     */
+    private function releaseInventory(Connection $conn, array $row): void
+    {
+        $updatedInventoryRows = $conn->executeStatement(
+            <<<'SQL'
+                UPDATE room_type_inventory
+                SET total_reserved = total_reserved - :roomCount, updated_at = now()
+                WHERE hotel_id = :hotelId
+                  AND room_type_id = :roomTypeId
+                  AND date >= :startDate
+                  AND date < :endDate
+                SQL,
+            [
+                'roomCount' => (int) $row['room_count'],
+                'hotelId' => (int) $row['hotel_id'],
+                'roomTypeId' => (int) $row['room_type_id'],
+                'startDate' => $row['start_date'],
+                'endDate' => $row['end_date'],
+            ],
+        );
+
+        $expectedNights = (new \DateTimeImmutable((string) $row['start_date']))
+            ->diff(new \DateTimeImmutable((string) $row['end_date']))
+            ->days;
+
+        if ($expectedNights !== $updatedInventoryRows) {
+            throw ReservationCancellationConflictException::forRequest(
+                (int) $row['hotel_id'],
+                (int) $row['room_type_id'],
+                new \DateTimeImmutable((string) $row['start_date']),
+                new \DateTimeImmutable((string) $row['end_date']),
+                (int) $row['room_count'],
+            );
+        }
     }
 }

@@ -24,7 +24,7 @@ final class PaymentControllerTest extends WebTestCase
 
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
-        $connection->executeStatement('TRUNCATE TABLE reservation, room_type, hotel, app_user RESTART IDENTITY CASCADE');
+        $connection->executeStatement('TRUNCATE TABLE room_type_inventory, reservation, room_type, hotel, app_user RESTART IDENTITY CASCADE');
     }
 
     public function testItProcessesApprovedPaymentForPendingReservation(): void
@@ -44,6 +44,31 @@ final class PaymentControllerTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
         self::assertSame($reservationId, $payload['reservationId']);
         self::assertSame('paid', $payload['status']);
+        self::assertSame(2, $this->totalReserved());
+    }
+
+    public function testRejectedPaymentReleasesInventoryAndLaterCancelDoesNotReleaseTwice(): void
+    {
+        $client = $this->client;
+        ['token' => $token, 'userId' => $userId] = $this->createAuthenticatedUser('decline@example.com');
+        $reservationId = $this->seedPendingReservation($userId);
+        $server = ['HTTP_AUTHORIZATION' => 'Bearer ' . $token, 'CONTENT_TYPE' => 'application/json'];
+
+        self::assertSame(2, $this->totalReserved());
+
+        $client->request('POST', '/v1/payments', server: $server, content: json_encode(['reservationID' => $reservationId, 'approved' => false], JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(200);
+        self::assertSame('rejected', json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR)['status']);
+        self::assertSame(0, $this->totalReserved());
+
+        // Repeating the decline is idempotent and must not release again.
+        $client->request('POST', '/v1/payments', server: $server, content: json_encode(['reservationID' => $reservationId, 'approved' => false], JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(200);
+        self::assertSame(0, $this->totalReserved());
+
+        $client->request('DELETE', '/v1/reservations/' . $reservationId, server: $server);
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $this->totalReserved());
     }
 
     public function testItRequiresAuthentication(): void
@@ -142,6 +167,22 @@ final class PaymentControllerTest extends WebTestCase
             ],
         );
 
+        $connection->executeStatement(
+            <<<'SQL'
+                INSERT INTO room_type_inventory (hotel_id, room_type_id, date, total_inventory, total_reserved, updated_at)
+                VALUES (:hotelId, :roomTypeId, '2026-10-01', 10, 1, now()), (:hotelId, :roomTypeId, '2026-10-02', 10, 1, now())
+                SQL,
+            ['hotelId' => $hotelId, 'roomTypeId' => $roomTypeId],
+        );
+
         return $reservationId;
+    }
+
+    private function totalReserved(): int
+    {
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+
+        return (int) $connection->fetchOne('SELECT COALESCE(SUM(total_reserved), 0) FROM room_type_inventory');
     }
 }

@@ -81,7 +81,8 @@ Matches the spec given, implemented as Symfony controllers under `/v1`:
 - `DELETE /v1/reservations/{id}` — cancel; releases inventory.
 - `POST /v1/payments` — mock v1 payment settlement for a reservation:
   `approved=true` transitions `pending -> paid`, `approved=false` transitions
-  `pending -> rejected`.
+  `pending -> rejected`, which also releases the held inventory in the same
+  transaction (a later cancel of a rejected reservation does not release again).
 
 Auth: Symfony Security with role-based voters (`ROLE_USER`, `ROLE_STAFF`, `ROLE_ADMIN`). JWT (LexikJWTAuthenticationBundle) for the API, since Next.js is a separate origin.
 
