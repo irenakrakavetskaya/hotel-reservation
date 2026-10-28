@@ -16,6 +16,7 @@ use Symfony\Component\Security\Core\Authorization\Voter\Vote;
  * ReservationController — see `.claude/rules/backend-symfony.md`
  * ("staff-only endpoints use voters, not inline role checks").
  */
+/** @extends Voter<string, mixed> */
 final class ReservationVoter extends Voter
 {
     public const VIEW = 'RESERVATION_VIEW';

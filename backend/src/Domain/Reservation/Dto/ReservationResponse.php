@@ -28,8 +28,7 @@ final class ReservationResponse
         public readonly int $totalPrice,
         public readonly string $createdAt,
         public readonly string $updatedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromEntity(Reservation $reservation): self
     {

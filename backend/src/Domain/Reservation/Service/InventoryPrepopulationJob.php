@@ -41,8 +41,7 @@ final class InventoryPrepopulationJob
         private readonly RoomTypeInventoryRepository $inventoryRepository,
         private readonly ReadCacheVersionService $cacheVersions,
         private readonly LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     /**
      * Daily run: extends the rolling window by exactly the one day that

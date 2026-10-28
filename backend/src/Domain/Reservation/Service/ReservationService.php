@@ -27,8 +27,7 @@ final class ReservationService
         private readonly RoomTypeInventoryRepository $inventoryRepository,
         private readonly RoomTypeRateRepository $rateRepository,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws InsufficientInventoryException if the DB constraint rejects the booking

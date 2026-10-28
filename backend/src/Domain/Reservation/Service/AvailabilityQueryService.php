@@ -30,8 +30,7 @@ final class AvailabilityQueryService
         private readonly RoomTypeRateRepository $rateRepository,
         private readonly CacheItemPoolInterface $cache,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     public function getAvailability(int $hotelId, int $roomTypeId, AvailabilityQueryRequest $query): AvailabilityResponse
     {

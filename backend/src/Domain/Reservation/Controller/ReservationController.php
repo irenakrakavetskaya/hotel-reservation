@@ -36,8 +36,7 @@ final class ReservationController extends AbstractController
     public function __construct(
         private readonly ReservationService $reservationService,
         private readonly ValidatorInterface $validator,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /v1/reservations — the logged-in user's reservation history.
@@ -79,7 +78,8 @@ final class ReservationController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function create(
         Request $httpRequest,
-        #[CurrentUser] AppUserInterface $user,
+        #[CurrentUser]
+        AppUserInterface $user,
     ): JsonResponse {
         $request = $this->parseCreateRequest($httpRequest);
         $reservation = $this->reservationService->createReservation($request, $user->getId());

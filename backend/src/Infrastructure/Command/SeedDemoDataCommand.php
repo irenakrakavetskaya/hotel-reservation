@@ -100,6 +100,7 @@ final class SeedDemoDataCommand extends Command
         return Command::SUCCESS;
     }
 
+    /** @param list<string> $roles */
     private function seedUser(string $email, string $plainPassword, array $roles): User
     {
         $existing = $this->userRepository->findOneBy(['email' => $email]);
@@ -115,6 +116,7 @@ final class SeedDemoDataCommand extends Command
         return $user;
     }
 
+    /** @param list<string> $amenities */
     private function seedHotel(
         string $name,
         string $address,
@@ -135,6 +137,7 @@ final class SeedDemoDataCommand extends Command
         return $hotel;
     }
 
+    /** @param list<string> $amenities */
     private function seedRoomType(
         Hotel $hotel,
         string $name,

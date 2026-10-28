@@ -84,6 +84,16 @@ describe('LoginForm', () => {
     expect(hardNavigate).not.toHaveBeenCalled();
   });
 
+  it('navigates to the requested redirect target after sign-in', async () => {
+    respond(200, { user: {} });
+    render(<LoginForm redirectTo="/admin" />);
+    await userEvent.type(screen.getByLabelText(/^Email/i), 'a@b.co');
+    await userEvent.type(screen.getByLabelText(/^Password/i), 'secret');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(hardNavigate).toHaveBeenCalledWith('/admin'));
+  });
+
   it('calls onSuccess instead of navigating when embedded', async () => {
     respond(200, { user: {} });
     const onSuccess = vi.fn();

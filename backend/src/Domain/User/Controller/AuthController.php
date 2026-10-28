@@ -14,9 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class AuthController extends AbstractController
 {
-    public function __construct(private readonly RegistrationService $registrationService)
-    {
-    }
+    public function __construct(private readonly RegistrationService $registrationService) {}
 
     #[Route('/v1/auth/login', name: 'auth_login', methods: ['POST'])]
     public function login(): JsonResponse

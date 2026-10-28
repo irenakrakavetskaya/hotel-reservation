@@ -28,8 +28,7 @@ final class PaymentController extends AbstractController
     public function __construct(
         private readonly PaymentService $paymentService,
         private readonly ReservationRepository $reservationRepository,
-    ) {
-    }
+    ) {}
 
     /**
      * POST /v1/payments
@@ -37,7 +36,8 @@ final class PaymentController extends AbstractController
     #[Route('', name: 'payment_process', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     public function process(
-        #[MapRequestPayload] ProcessPaymentRequest $request,
+        #[MapRequestPayload]
+        ProcessPaymentRequest $request,
     ): JsonResponse {
         $reservationId = $this->parseId($request->reservationId);
 

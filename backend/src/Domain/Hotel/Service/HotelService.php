@@ -20,8 +20,7 @@ final class HotelService
     public function __construct(
         private readonly HotelRepository $hotelRepository,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     /** @return list<Hotel> */
     public function listHotels(?string $city = null): array

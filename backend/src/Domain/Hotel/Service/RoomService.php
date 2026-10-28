@@ -29,8 +29,7 @@ final class RoomService
         private readonly RoomTypeRepository $roomTypeRepository,
         private readonly HotelService $hotelService,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     /** @return list<Room> */
     public function listRooms(int $hotelId): array

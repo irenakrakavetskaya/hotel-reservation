@@ -11,6 +11,5 @@ final class RegistrationResult
     public function __construct(
         public readonly User $user,
         public readonly string $token,
-    ) {
-    }
+    ) {}
 }

@@ -24,7 +24,7 @@ class RoomType
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
-    private ?int $id = null;
+    private int $id;
 
     #[ORM\ManyToOne(targetEntity: Hotel::class)]
     #[ORM\JoinColumn(name: 'hotel_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
@@ -53,6 +53,7 @@ class RoomType
     #[ORM\Column(type: 'datetimetz_immutable')]
     private \DateTimeImmutable $updatedAt;
 
+    /** @param list<string> $amenities */
     public function __construct(
         Hotel $hotel,
         string $name,
@@ -73,7 +74,7 @@ class RoomType
 
     public function getId(): ?int
     {
-        return $this->id;
+        return $this->id ?? null;
     }
 
     public function getHotel(): Hotel
@@ -117,6 +118,7 @@ class RoomType
         return $this->updatedAt;
     }
 
+    /** @param list<string> $amenities */
     public function update(
         string $name,
         ?string $description,

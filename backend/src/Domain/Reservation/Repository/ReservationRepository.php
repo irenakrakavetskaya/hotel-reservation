@@ -11,8 +11,9 @@ use App\Domain\Reservation\Exception\InsufficientInventoryException;
 use App\Domain\Reservation\Exception\ReservationCancellationConflictException;
 use App\Domain\Reservation\Exception\ReservationNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\DBAL\Exception\DriverException;
+use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Uid\Uuid;
 
@@ -141,7 +142,7 @@ class ReservationRepository extends ServiceEntityRepository
         } catch (DbalException $e) {
             $conn->rollBack();
 
-            if (self::SQLSTATE_CHECK_VIOLATION === $e->getSQLState()) {
+            if ($e instanceof DriverException && self::SQLSTATE_CHECK_VIOLATION === $e->getSQLState()) {
                 throw InsufficientInventoryException::forRequest(
                     $reservation->getHotelId(),
                     $reservation->getRoomTypeId(),
@@ -162,7 +163,7 @@ class ReservationRepository extends ServiceEntityRepository
         // reservationID already did — either way, return the row that's
         // actually in the database now rather than the in-memory object,
         // so a retry gets back exactly what the first call produced.
-        $this->getEntityManager()->clear(Reservation::class);
+        $this->getEntityManager()->clear();
 
         return $this->find($reservation->getId())
             ?? throw new \LogicException('Reservation should exist immediately after create().');
@@ -241,7 +242,7 @@ class ReservationRepository extends ServiceEntityRepository
         } catch (DbalException $e) {
             $conn->rollBack();
 
-            if (self::SQLSTATE_CHECK_VIOLATION === $e->getSQLState() && is_array($row)) {
+            if ($e instanceof DriverException && self::SQLSTATE_CHECK_VIOLATION === $e->getSQLState() && is_array($row)) {
                 throw ReservationCancellationConflictException::forRequest(
                     (int) $row['hotel_id'],
                     (int) $row['room_type_id'],
@@ -258,7 +259,7 @@ class ReservationRepository extends ServiceEntityRepository
             throw $e;
         }
 
-        $this->getEntityManager()->clear(Reservation::class);
+        $this->getEntityManager()->clear();
 
         return $this->find($id) ?? throw ReservationNotFoundException::forId($id);
     }
@@ -309,7 +310,7 @@ class ReservationRepository extends ServiceEntityRepository
             throw $e;
         }
 
-        $this->getEntityManager()->clear(Reservation::class);
+        $this->getEntityManager()->clear();
 
         return $this->find($id) ?? throw ReservationNotFoundException::forId($id);
     }

@@ -16,9 +16,7 @@ use Symfony\Component\Uid\Uuid;
  */
 final class PaymentService
 {
-    public function __construct(private readonly ReservationRepository $reservationRepository)
-    {
-    }
+    public function __construct(private readonly ReservationRepository $reservationRepository) {}
 
     public function processReservationPayment(Uuid $reservationId, bool $approved): Reservation
     {

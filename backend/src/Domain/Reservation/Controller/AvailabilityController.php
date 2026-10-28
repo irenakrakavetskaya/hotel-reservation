@@ -22,9 +22,7 @@ final class AvailabilityController extends AbstractController
     public function __construct(
         private readonly AvailabilityQueryService $availabilityQueryService,
         private readonly ValidatorInterface $validator,
-    )
-    {
-    }
+    ) {}
 
     #[Route('/v1/hotels/{hotelId<\d+>}/room-types/{roomTypeId<\d+>}/availability', name: 'room_type_availability', methods: ['GET'])]
     public function getAvailability(
@@ -35,8 +33,8 @@ final class AvailabilityController extends AbstractController
         $startDate = $request->query->get('startDate');
         $endDate = $request->query->get('endDate');
         $roomCount = $request->query->get('roomCount', '1');
-        if (!is_string($startDate) || !is_string($endDate) || !is_string($roomCount)) {
-            throw new UnprocessableEntityHttpException('startDate, endDate, and roomCount must be scalar query values.');
+        if (!is_string($startDate) || !is_string($endDate)) {
+            throw new UnprocessableEntityHttpException('startDate and endDate are required query values.');
         }
 
         $query = new AvailabilityQueryRequest();

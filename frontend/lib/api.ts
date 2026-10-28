@@ -23,6 +23,25 @@ export type RoomType = {
   updatedAt: string;
 };
 
+export type RoomStatus = 'active' | 'maintenance' | 'inactive';
+
+export type Room = {
+  id: number;
+  hotelId: number;
+  roomTypeId: number;
+  roomNumber: string;
+  floor: number | null;
+  status: RoomStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UserSummary = {
+  id: number;
+  email: string;
+  roles: string[];
+};
+
 export type AvailabilityDay = {
   date: string;
   totalInventory: number;
@@ -92,7 +111,7 @@ type ApiFetchOptions = Omit<RequestInit, 'headers'> & {
   headers?: HeadersInit;
 };
 
-function apiBaseUrl(): string {
+export function apiBaseUrl(): string {
   return process.env.API_SERVER_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8090/v1';
 }
 

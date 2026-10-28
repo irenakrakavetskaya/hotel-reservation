@@ -32,8 +32,7 @@ final class RoomController extends AbstractController
         private readonly RoomService $roomService,
         private readonly CacheItemPoolInterface $cache,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     /**
      * GET /v1/hotels/{hotelId}/rooms
@@ -50,7 +49,7 @@ final class RoomController extends AbstractController
         }
 
         $responses = RoomResponse::fromEntities($this->roomService->listRooms($hotelId));
-        $payload = array_map(static fn (RoomResponse $room): array => get_object_vars($room), $responses);
+        $payload = array_map(static fn(RoomResponse $room): array => get_object_vars($room), $responses);
 
         $cacheItem->set($payload);
         $cacheItem->expiresAfter(self::CACHE_TTL_SECONDS);

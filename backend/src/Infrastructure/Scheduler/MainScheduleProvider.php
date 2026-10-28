@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Scheduler;
 
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule;
 use Symfony\Component\Scheduler\ScheduleProviderInterface;
 use Symfony\Component\Console\Messenger\RunCommandMessage;
+use Symfony\Contracts\Cache\CacheInterface;
 
 /**
  * Requires `symfony/scheduler` (composer require symfony/scheduler) and a
@@ -30,9 +30,7 @@ use Symfony\Component\Console\Messenger\RunCommandMessage;
 #[AsSchedule('default')]
 final class MainScheduleProvider implements ScheduleProviderInterface
 {
-    public function __construct(private readonly CacheItemPoolInterface $cache)
-    {
-    }
+    public function __construct(private readonly CacheInterface $cache) {}
 
     public function getSchedule(): Schedule
     {

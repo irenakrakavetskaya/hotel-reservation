@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Symfony\Component\Dotenv\Dotenv;
 
-require dirname(__DIR__).'/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 if (class_exists(Dotenv::class)) {
-    (new Dotenv())->bootEnv(dirname(__DIR__).'/.env');
+    (new Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
 }
 
 // Functional tests TRUNCATE tables, so refuse to run against a non-test database.

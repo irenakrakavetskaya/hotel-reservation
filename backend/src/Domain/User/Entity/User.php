@@ -15,10 +15,12 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\UniqueConstraint(name: 'uniq_app_user_email', columns: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface, AppUserInterface
 {
+    public const ASSIGNABLE_ROLES = ['ROLE_STAFF', 'ROLE_ADMIN'];
+
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
-    private ?int $id = null;
+    private int $id;
 
     #[ORM\Column(length: 180)]
     private string $email;
@@ -30,6 +32,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AppUser
     #[ORM\Column]
     private string $password;
 
+    /** @param list<string> $roles */
     public function __construct(string $email, string $password, array $roles = [])
     {
         $this->email = mb_strtolower($email);
@@ -53,12 +56,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AppUser
         return array_values(array_unique([...$this->roles, 'ROLE_USER']));
     }
 
+    /** @param list<string> $roles */
+    public function setRoles(array $roles): void
+    {
+        $this->roles = array_values(array_diff($roles, ['ROLE_USER']));
+    }
+
     public function getPassword(): string
     {
         return $this->password;
     }
 
-    public function eraseCredentials(): void
-    {
-    }
+    public function eraseCredentials(): void {}
 }

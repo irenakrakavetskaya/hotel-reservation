@@ -11,9 +11,7 @@ use Psr\Cache\CacheItemPoolInterface;
  */
 final class ReadCacheVersionService
 {
-    public function __construct(private readonly CacheItemPoolInterface $cache)
-    {
-    }
+    public function __construct(private readonly CacheItemPoolInterface $cache) {}
 
     public function getVersion(string $scope): int
     {

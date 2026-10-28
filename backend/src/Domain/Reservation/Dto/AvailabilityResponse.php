@@ -29,8 +29,7 @@ final class AvailabilityResponse
         public readonly ?int $totalPrice,
         public readonly int $minAvailableRooms,
         public readonly array $days,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{

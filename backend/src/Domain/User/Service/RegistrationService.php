@@ -21,8 +21,7 @@ final class RegistrationService
         private readonly UserRepository $userRepository,
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly JWTTokenManagerInterface $tokenManager,
-    ) {
-    }
+    ) {}
 
     public function register(RegisterRequest $request): RegistrationResult
     {

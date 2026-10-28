@@ -19,7 +19,7 @@ class Hotel
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
-    private ?int $id = null;
+    private int $id;
 
     #[ORM\Column(length: 255)]
     private string $name;
@@ -50,6 +50,7 @@ class Hotel
     #[ORM\Column(type: 'datetimetz_immutable')]
     private \DateTimeImmutable $updatedAt;
 
+    /** @param list<string> $amenities */
     public function __construct(
         string $name,
         string $address,
@@ -72,7 +73,7 @@ class Hotel
 
     public function getId(): ?int
     {
-        return $this->id;
+        return $this->id ?? null;
     }
 
     public function getName(): string
@@ -121,6 +122,7 @@ class Hotel
         return $this->updatedAt;
     }
 
+    /** @param list<string> $amenities */
     public function update(
         string $name,
         string $address,

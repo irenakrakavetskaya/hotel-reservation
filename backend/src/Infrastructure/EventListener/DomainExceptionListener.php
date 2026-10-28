@@ -13,7 +13,9 @@ use App\Domain\Hotel\Exception\RoomTypeResourceNotFoundException;
 use App\Domain\Reservation\Exception\ReservationCancellationConflictException;
 use App\Domain\Reservation\Exception\InsufficientInventoryException;
 use App\Domain\Reservation\Exception\ReservationNotFoundException;
+use App\Domain\User\Exception\RoleChangeNotAllowedException;
 use App\Domain\User\Exception\UserAlreadyExistsException;
+use App\Domain\User\Exception\UserNotFoundException;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,6 +47,8 @@ final class DomainExceptionListener
             $exception instanceof RoomTypeNotFoundException => Response::HTTP_UNPROCESSABLE_ENTITY,
             $exception instanceof DuplicateRoomNumberException => Response::HTTP_CONFLICT,
             $exception instanceof UserAlreadyExistsException => Response::HTTP_CONFLICT,
+            $exception instanceof UserNotFoundException => Response::HTTP_NOT_FOUND,
+            $exception instanceof RoleChangeNotAllowedException => Response::HTTP_CONFLICT,
             default => null,
         };
 

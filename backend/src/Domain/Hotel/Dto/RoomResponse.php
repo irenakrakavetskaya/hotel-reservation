@@ -18,8 +18,7 @@ final class RoomResponse
         public readonly string $status,
         public readonly string $createdAt,
         public readonly string $updatedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromEntity(Room $room): self
     {

@@ -29,7 +29,7 @@ final class RoomRequest
     /** @return list<string> */
     public static function statusChoices(): array
     {
-        return array_map(static fn (RoomStatus $s) => $s->value, RoomStatus::cases());
+        return array_map(static fn(RoomStatus $s) => $s->value, RoomStatus::cases());
     }
 
     public function getStatus(): RoomStatus

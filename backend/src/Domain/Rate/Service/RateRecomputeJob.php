@@ -42,8 +42,7 @@ final class RateRecomputeJob
         private readonly EntityManagerInterface $entityManager,
         private readonly ReadCacheVersionService $cacheVersions,
         private readonly LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     public function run(?\DateTimeImmutable $today = null): void
     {

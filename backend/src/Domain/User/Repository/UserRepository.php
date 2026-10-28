@@ -17,4 +17,27 @@ final class UserRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, User::class);
     }
+
+    /** @return list<User> */
+    public function search(?string $search, int $limit, int $offset): array
+    {
+        $qb = $this->createQueryBuilder('u')->orderBy('u.id', 'ASC')->setMaxResults($limit)->setFirstResult($offset);
+        if (null !== $search) {
+            $qb->andWhere('u.email LIKE :search')
+                ->setParameter('search', '%' . addcslashes(mb_strtolower($search), '%_\\') . '%');
+        }
+
+        /** @var list<User> */
+        return $qb->getQuery()->getResult();
+    }
+
+    /** Counts admins while row-locking them, so concurrent demotions cannot both see "2 admins". */
+    public function countAdminsForUpdate(): int
+    {
+        $ids = $this->getEntityManager()->getConnection()->fetchFirstColumn(
+            "SELECT id FROM app_user WHERE roles::jsonb @> '[\"ROLE_ADMIN\"]'::jsonb FOR UPDATE",
+        );
+
+        return count($ids);
+    }
 }

@@ -174,3 +174,17 @@ dialog.auth-modal::backdrop { background: rgba(23, 35, 33, 0.5); }
   .auth-modal__panels section + section { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 20px; }
 }
 .link-button { order: 1; margin: 0; padding: 0; background: none; border: 0; color: var(--accent, #0f6b5c); text-decoration: underline; cursor: pointer; font-size: 0.85rem; align-self: flex-start; }
+
+.admin-shell { max-width: 1180px; margin: 0 auto; }
+.admin-subnav { display: flex; gap: 22px; padding: 18px 32px 0; }
+.admin-subnav a, .admin-actions a, .admin-shell main > p a { color: var(--teal); font-weight: 700; text-decoration: none; }
+.admin-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.admin-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); }
+.admin-table th, .admin-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.admin-table th { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; }
+.admin-delete { display: inline-flex; flex-direction: column; gap: 4px; }
+.admin-danger { color: #b3261e; }
+.admin-roles { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+.admin-check { display: inline-flex; grid-template-columns: none; align-items: center; gap: 8px; color: var(--ink); font-size: 0.95rem; }
+.admin-search { display: flex; gap: 12px; align-items: end; margin-top: 20px; }

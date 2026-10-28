@@ -6,9 +6,9 @@ import PasswordToggle from '../../components/PasswordToggle';
 import { hardNavigate } from '../../lib/navigation';
 import { parseApiError, validateEmail, validateLoginPassword, type FieldErrors } from '../../lib/auth-validation';
 
-type LoginFormProps = { onSuccess?: () => void; initialEmail?: string; focusPassword?: boolean };
+type LoginFormProps = { onSuccess?: () => void; initialEmail?: string; focusPassword?: boolean; redirectTo?: string };
 
-export default function LoginForm({ onSuccess, initialEmail = '', focusPassword = false }: LoginFormProps = {}) {
+export default function LoginForm({ onSuccess, initialEmail = '', focusPassword = false, redirectTo = '/reservations' }: LoginFormProps = {}) {
   const router = useRouter();
   const id = useId();
   const emailRef = useRef<HTMLInputElement>(null);
@@ -55,7 +55,7 @@ export default function LoginForm({ onSuccess, initialEmail = '', focusPassword 
       if (onSuccess) {
         onSuccess();
         router.refresh();
-      } else hardNavigate('/reservations');
+      } else hardNavigate(redirectTo);
     } catch {
       setError('Network problem: check your connection and try again.');
     } finally {

@@ -22,8 +22,7 @@ final class RoomTypeResponse
         public readonly array $amenities,
         public readonly string $createdAt,
         public readonly string $updatedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromEntity(RoomType $roomType): self
     {

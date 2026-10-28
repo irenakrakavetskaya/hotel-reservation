@@ -32,8 +32,7 @@ final class RoomTypeController extends AbstractController
         private readonly RoomTypeService $roomTypeService,
         private readonly CacheItemPoolInterface $cache,
         private readonly ReadCacheVersionService $cacheVersions,
-    ) {
-    }
+    ) {}
 
     #[Route('', name: 'room_type_list', methods: ['GET'])]
     public function list(int $hotelId): JsonResponse
@@ -47,7 +46,7 @@ final class RoomTypeController extends AbstractController
         }
 
         $responses = RoomTypeResponse::fromEntities($this->roomTypeService->listRoomTypes($hotelId));
-        $payload = array_map(static fn (RoomTypeResponse $roomType): array => get_object_vars($roomType), $responses);
+        $payload = array_map(static fn(RoomTypeResponse $roomType): array => get_object_vars($roomType), $responses);
 
         $cacheItem->set($payload);
         $cacheItem->expiresAfter(self::CACHE_TTL_SECONDS);

@@ -9,6 +9,7 @@ use App\Domain\Hotel\Entity\Hotel;
 /** Explicit API output shape — never serialize the Hotel entity directly. */
 final class HotelResponse
 {
+    /** @param list<string> $amenities */
     private function __construct(
         public readonly int $id,
         public readonly string $name,
@@ -20,8 +21,7 @@ final class HotelResponse
         public readonly array $amenities,
         public readonly string $createdAt,
         public readonly string $updatedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromEntity(Hotel $hotel): self
     {
