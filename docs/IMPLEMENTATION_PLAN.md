@@ -146,7 +146,7 @@ back together with the reservation insert.
 ## 6. Frontend (Next.js 16)
 
 - Hotel detail page and room detail page: Server Components, fetch from `GET /v1/hotels/{id}` and room-availability query — these are the two read-heavy, cacheable pages, so lean on Next's data cache / ISR.
-- Booking page: Client Component (form state — dates, guest count, payment fields) that calls the reservation-service query endpoint to re-validate availability before showing "Book," then `POST /v1/reservations` with a UUID generated client-side as `reservationID` on submit.
+- Booking page: Client Component (form state — dates, guest count, payment fields) that calls the reservation-service query endpoint to re-validate availability before showing "Book," then `POST /v1/reservations` with a UUID generated client-side as `reservationID` on submit. The ID is persisted per stay in sessionStorage (`lib/reservation-key.ts`) and cleared once a response arrives, so a reload-and-retry after a lost response reuses it.
 - Admin panel (implemented): `/admin/...`, see §6.1.
 - State/data fetching: React Query (or Next's built-in fetch caching) for the booking flow; keep the "book" button disabled during the in-flight request to reduce (not eliminate — the idempotency key is what actually prevents double-booking) accidental double-clicks.
 

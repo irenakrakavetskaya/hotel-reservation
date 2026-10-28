@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import AuthModal from '../../../../../components/AuthModal';
+import { clearReservationKey, getOrCreateReservationKey } from '../../../../../lib/reservation-key';
 import { ApiError, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
 
 type BookingFormProps = {
@@ -34,8 +35,6 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
   const [roomCount, setRoomCount] = useState(initialRoomCount ?? 1);
   const [availability, setAvailability] = useState<Availability | null>(initialAvailability ?? null);
   const [reservation, setReservation] = useState<Reservation | null>(null);
-  // One ID per stay: reused on retries so a repeated POST is idempotent; cleared when the stay changes.
-  const reservationIdRef = useRef<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -47,7 +46,6 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
     event.preventDefault();
     setError(null);
     setReservation(null);
-    reservationIdRef.current = null;
     setIsChecking(true);
 
     try {
@@ -64,8 +62,9 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
 
   async function createReservation() {
     if (!availability || !availability.canBook) return;
-    reservationIdRef.current ??= crypto.randomUUID();
-    const reservationId = reservationIdRef.current;
+    // One persisted ID per stay: a retry (even after a reload) reuses it, so the POST stays idempotent.
+    const stay = { hotelId: hotel.id, roomTypeId: roomType.id, startDate, endDate, roomCount };
+    const reservationId = getOrCreateReservationKey(stay);
     setError(null);
     setIsBooking(true);
 
@@ -78,10 +77,11 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
         endDate,
         roomCount,
       }, token);
+      clearReservationKey(stay);
       setReservation(result);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.isUnauthorized) setIsAuthOpen(true);
-      if (requestError instanceof ApiError && requestError.isConflict) reservationIdRef.current = null;
+      if (requestError instanceof ApiError && requestError.isConflict) clearReservationKey(stay);
       setError(messageForError(requestError));
     } finally {
       setIsBooking(false);
@@ -90,13 +90,11 @@ export default function BookingForm({ hotel, roomType, token, initialStartDate, 
 
   function editStay(change: () => void) {
     change();
-    reservationIdRef.current = null;
     setAvailability(null);
     setError(null);
   }
 
   function bookAnother() {
-    reservationIdRef.current = null;
     setReservation(null);
     setAvailability(null);
     setError(null);

@@ -29,6 +29,7 @@ function renderForm(props: Partial<React.ComponentProps<typeof BookingForm>> = {
 const book = () => screen.getByRole('button', { name: 'Book this stay' });
 
 beforeEach(() => {
+  window.sessionStorage.clear();
   Object.values(api).forEach((mock) => mock.mockReset());
 });
 
@@ -71,6 +72,37 @@ describe('BookingForm', () => {
 
     const ids = api.createReservation.mock.calls.map(([input]) => input.reservationID);
     expect(ids[0]).toBe(ids[1]);
+  });
+
+  it('reuses the reservationID after a reload when the committed request lost its response', async () => {
+    api.createReservation.mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(reservation('pending'));
+    const first = renderForm();
+    await userEvent.click(book());
+    expect(await screen.findByText(/Network problem/)).toBeInTheDocument();
+
+    // Reload: the component remounts with fresh state, storage survives.
+    first.unmount();
+    renderForm();
+    await userEvent.click(book());
+    await screen.findByText('Reservation confirmed. Payment is pending.');
+
+    const ids = api.createReservation.mock.calls.map(([input]) => input.reservationID);
+    expect(ids[0]).toBe(ids[1]);
+  });
+
+  it('uses a fresh reservationID for the same stay after the previous booking completed', async () => {
+    api.createReservation.mockResolvedValue(reservation('pending'));
+    const first = renderForm();
+    await userEvent.click(book());
+    await screen.findByText('Reservation confirmed. Payment is pending.');
+    first.unmount();
+
+    renderForm();
+    await userEvent.click(book());
+    await waitFor(() => expect(api.createReservation).toHaveBeenCalledTimes(2));
+
+    const ids = api.createReservation.mock.calls.map(([input]) => input.reservationID);
+    expect(ids[0]).not.toBe(ids[1]);
   });
 
   it('generates a new reservationID after the dates change and availability is re-checked', async () => {
