@@ -16,9 +16,13 @@ Module boundaries are enforced by directory structure + Symfony service visibili
 `id, name, address, city, country, star_rating, description, amenities (jsonb), created_at, updated_at`
 
 ### `app_user`
-`id, email, roles (jsonb), password` — a minimal identity store for API
-authentication. `roles` always receives `ROLE_USER` at runtime; staff/admin
-access is provisioned by adding `ROLE_STAFF` or `ROLE_ADMIN`.
+`id, email, roles (jsonb), password` — identity store for API authentication.
+`roles` always receives `ROLE_USER` at runtime. Public registration only ever
+creates `ROLE_USER`; `ROLE_STAFF` / `ROLE_ADMIN` are granted by an admin through
+the user-management API (§2) or bootstrapped with
+`php bin/console app:user:promote <email> --role=ROLE_ADMIN|ROLE_STAFF`.
+Assignable roles are limited to `ROLE_STAFF` and `ROLE_ADMIN`
+(`User::ASSIGNABLE_ROLES`). No migration was needed: `roles` was already jsonb.
 
 ### `room_type`
 `id, hotel_id (FK), name, description, max_occupancy, base_price, amenities (jsonb)`
@@ -57,7 +61,15 @@ Pre-populated 2 years out by a scheduled job (Symfony Messenger + cron, or a `sy
 
 Matches the spec given, implemented as Symfony controllers under `/v1`:
 
-- `POST /v1/auth/login` — returns a JWT for a provisioned user.
+- `POST /v1/auth/login` — returns a JWT for a registered user.
+- `POST /v1/auth/register` — public sign-up (`email`, `password`,
+  `passwordConfirmation`); always creates `ROLE_USER`.
+- `GET /v1/admin/users?search&limit&offset` — admin-only user listing.
+- `PUT /v1/admin/users/{id}/roles` — admin-only; body `{"roles": ["ROLE_STAFF"]}`.
+  Guarded by `UserManagementVoter` (`USER_MANAGE`, requires `ROLE_ADMIN`).
+  Demoting the last admin returns 409 (`RoleChangeNotAllowedException`); the
+  admin count is read with a row lock so concurrent demotions cannot leave zero
+  admins. Unknown user returns 404.
 - `GET/POST/PUT/DELETE /v1/hotels[/{id}]` — staff-only for write.
 - `GET/POST/PUT/DELETE /v1/hotels/{hotelId}/room-types[/{id}]` — staff-only for write.
 - `GET/POST/PUT/DELETE /v1/hotels/{hotelId}/rooms[/{id}]` — staff-only for write.
@@ -73,9 +85,15 @@ Matches the spec given, implemented as Symfony controllers under `/v1`:
 
 Auth: Symfony Security with role-based voters (`ROLE_USER`, `ROLE_STAFF`, `ROLE_ADMIN`). JWT (LexikJWTAuthenticationBundle) for the API, since Next.js is a separate origin.
 
-The initial runnable backend includes a minimal `app_user` schema for JWT
-authentication. Account registration and staff provisioning remain an explicit
-future workflow rather than an unauthenticated public endpoint.
+`security.yaml` defines `role_hierarchy: ROLE_ADMIN: ROLE_STAFF`, so admins pass
+every staff check. The JWT payload is `{iat, exp, roles, username}` with a 1h
+TTL, and `User::getRoles()` returns the stored roles plus `ROLE_USER` (no
+hierarchy expansion), so the frontend treats `ROLE_ADMIN` as staff itself.
+**Role changes take effect at the user's next login**; the backend still
+re-loads the user from the DB on each request.
+
+Domain exceptions are mapped to HTTP codes in `DomainExceptionListener`
+(e.g. `UserNotFoundException` → 404, `RoleChangeNotAllowedException` → 409).
 
 ## 3. Concurrency & idempotency (the core of the system)
 
@@ -128,14 +146,68 @@ back together with the reservation insert.
 
 - Hotel detail page and room detail page: Server Components, fetch from `GET /v1/hotels/{id}` and room-availability query — these are the two read-heavy, cacheable pages, so lean on Next's data cache / ISR.
 - Booking page: Client Component (form state — dates, guest count, payment fields) that calls the reservation-service query endpoint to re-validate availability before showing "Book," then `POST /v1/reservations` with a UUID generated client-side as `reservationID` on submit.
-- Admin panel: separate route group (`/admin/...`) gated by role, CRUD forms over the hotel/room endpoints.
+- Admin panel (implemented): `/admin/...`, see §6.1.
 - State/data fetching: React Query (or Next's built-in fetch caching) for the booking flow; keep the "book" button disabled during the in-flight request to reduce (not eliminate — the idempotency key is what actually prevents double-booking) accidental double-clicks.
+
+### 6.1 Admin panel (implemented)
+
+Routes under `frontend/app/admin/`:
+
+| Route | Access | Purpose |
+|---|---|---|
+| `/admin` | staff, admin | dashboard / entry points |
+| `/admin/hotels`, `/new`, `/[hotelId]/edit` | staff, admin | hotel CRUD |
+| `/admin/hotels/[hotelId]/room-types` (+ `/new`, `/[id]/edit`) | staff, admin | room type CRUD |
+| `/admin/hotels/[hotelId]/rooms` (+ `/new`, `/[id]/edit`) | staff, admin | physical room CRUD |
+| `/admin/users` | admin only | search users, toggle `ROLE_STAFF` / `ROLE_ADMIN` |
+
+Design decisions:
+
+- **Server-side guard.** `app/admin/layout.tsx` decodes the `access_token`
+  cookie (`lib/session.ts`: `decodeSession`, `isStaff`, `isAdmin`) and redirects
+  anonymous visitors to `/login?next=/admin` (`lib/safe-redirect.ts` rejects
+  open redirects) or returns 404 for signed-in users without the role. The
+  decode does **not** verify the signature; it only gates UI. The backend
+  voters/role checks are the real authorization.
+- **Nav.** `components/AuthNav.tsx` (server component) shows an "Admin" link for
+  staff and admins.
+- **Reads** happen in server components via `lib/admin-data.ts` with
+  `cache: 'no-store'`.
+- **Writes** go from the browser (`lib/admin-client.ts`) to a same-origin proxy,
+  `app/api/admin/[...path]/route.ts`. It whitelists paths by regex, allows only
+  POST/PUT/DELETE, attaches the Bearer token from the HttpOnly cookie (the
+  token is never exposed to client JS) and calls `revalidatePath('/hotels',
+  'layout')` on success so the `revalidate: 60` public pages refresh.
+- **Forms.** `components/admin/AdminForm.tsx` is driven by a `resource` key
+  (`hotel | roomType | room`) with field definitions and mappers in
+  `lib/admin-forms.ts` (prices entered in dollars, sent as integer cents).
+  Backend 422 `violations` are mapped to field errors; 401/403 get friendly
+  messages. `DeleteButton` and `RoleToggles` cover delete and role changes.
+- **Auth pages.** Login/register do a full navigation after success
+  (`lib/navigation.ts` `hardNavigate`) so the server-rendered nav picks up the
+  new cookie; the login page honours `?next=`.
+
+Tests: `frontend/tests/` covers session decoding, safe redirect, form mappers,
+the proxy route, the admin layout guard, `AuthNav`, and the admin components
+(125 tests in total). Backend: `UserAdminControllerTest` (8 tests) covers
+auth, voter, last-admin protection and validation.
 
 ## 7. Deployment
 
 - `docker/Dockerfile.backend` — multi-stage: composer install → PHP-FPM + Nginx (or FrankenPHP) runtime.
 - `docker/Dockerfile.frontend` — multi-stage: `npm ci && npm run build` → `next start` (or standalone output) runtime image.
-- `docker-compose.yml` — `backend`, `frontend`, `postgres`, `redis`, `nginx` (reverse proxy), for local dev.
+- `docker-compose.yml` — `backend`, `frontend`, `scheduler`, `postgres`, `redis`, `nginx` (reverse proxy on `:8090`), for local dev.
+  - The `frontend` image is a build, not source-mounted: rebuild with
+    `docker compose up -d --build frontend` after frontend changes. The backend
+    mounts its source.
+  - `docker/nginx/default.conf` routes `/v1/*` and `/_profiler|_wdt` to
+    PHP-FPM and everything else to Next.js. It uses Docker's DNS resolver with
+    upstreams held in variables, so recreating `backend`/`frontend` does not
+    leave nginx pointing at a stale IP (previously a 502).
+- Git hooks in `.githooks/`: `pre-commit` runs `composer lint` and frontend
+  lint/typecheck; `pre-push` runs `composer test` and `npm test`. Both load nvm
+  when `npm` is not on PATH (git GUIs skip the login shell). PHP files use LF
+  endings (`.gitattributes`), which PER-CS requires.
 - `.gitlab-ci.yml` stages: `lint → test → build → deploy`.
   - `lint`: php-cs-fixer + phpstan (backend), eslint + tsc (frontend).
   - `test`: PHPUnit (with a throwaway Postgres service container) + frontend unit tests.
@@ -143,6 +215,14 @@ back together with the reservation insert.
   - `deploy`: environment-gated (manual for prod), pulls tagged images.
 
 ## 8. Build order (suggested milestones)
+
+**Status:** steps 1–9 are done: the reservation write path, concurrency tests,
+hotel/room/room-type CRUD, rates, Redis caching, the customer frontend,
+cancellation and mock payments. Step 8 (admin panel) is now implemented as
+described in §6.1, together with registration and role management. Step 10 is
+in place for local Docker and git hooks. Remaining ideas: a real payment
+processor, physical-room assignment at check-in, and token refresh so role
+changes apply without re-login.
 
 1. Symfony skeleton + Doctrine entities + migrations for all tables above (no business logic yet).
 2. `room_type_inventory` pre-population job + the two-year rolling window job.
@@ -160,3 +240,10 @@ back together with the reservation insert.
 - **Concurrency test is the highest-value test in the whole system**: spin up N parallel `POST /v1/reservations` requests against a room type with `total_inventory=1` (or few) and assert exactly `total_inventory * 1.1` (rounded down) succeed, the rest get 409s, and the DB constraint is never violated even if the application logic has a bug.
 - Idempotency test: same `reservationID` submitted twice (sequentially and concurrently) → exactly one reservation row, same response both times.
 - Overbooking boundary test: exactly at 110% succeeds, one more fails.
+- Admin/role tests: only admins can list users and change roles, the last admin
+  cannot be demoted, plain users get 403/404 on `/admin` and the proxy.
+
+Run backend tests against the **test** database only (they truncate tables):
+`APP_ENV=test` with `DATABASE_URL` pointing at `hotel_reservations_test`. If
+tests run in the container, remove the www-data-owned `var/cache/test`
+afterwards, or host-side `composer test` (used by the pre-push hook) fails.
