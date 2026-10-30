@@ -1,22 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { ApiError, customerApi, type Reservation } from '../../lib/api';
+import { reservationCardReducer } from '../../lib/reservation-card-reducer';
 
 export default function ReservationCard({ initialReservation }: { initialReservation: Reservation }) {
-  const [reservation, setReservation] = useState(initialReservation);
-  const [isCanceling, setIsCanceling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [{ reservation, isCanceling, error }, dispatch] = useReducer(reservationCardReducer, {
+    reservation: initialReservation,
+    isCanceling: false,
+    error: null,
+  });
 
   async function cancel() {
-    setError(null);
-    setIsCanceling(true);
+    dispatch({ type: 'cancelStarted' });
     try {
-      setReservation(await customerApi.cancelReservation(reservation.reservationId));
+      dispatch({ type: 'cancelSucceeded', reservation: await customerApi.cancelReservation(reservation.reservationId) });
     } catch (requestError) {
-      setError(requestError instanceof ApiError ? requestError.message : 'Could not cancel this reservation.');
-    } finally {
-      setIsCanceling(false);
+      dispatch({ type: 'cancelFailed', error: requestError instanceof ApiError ? requestError.message : 'Could not cancel this reservation.' });
     }
   }
 

@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useReducer } from 'react';
 import AuthModal from '../../../../../components/AuthModal';
 import { clearReservationKey, getOrCreateReservationKey } from '../../../../../lib/reservation-key';
-import { ApiError, customerApi, hotelApi, type Availability, type RoomType, type Hotel, type Reservation } from '../../../../../lib/api';
+import { bookingReducer, type BookingState } from '../../../../../lib/booking-reducer';
+import { ApiError, customerApi, hotelApi, type Availability, type RoomType, type Hotel } from '../../../../../lib/api';
 
 type BookingFormProps = {
   hotel: Hotel;
@@ -30,33 +31,32 @@ function formatPrice(priceInCents: number | null): string {
 }
 
 export default function BookingForm({ hotel, roomType, isSignedIn, initialStartDate, initialEndDate, initialRoomCount, initialAvailability }: BookingFormProps) {
-  const [startDate, setStartDate] = useState(initialStartDate ?? dateAfter(7));
-  const [endDate, setEndDate] = useState(initialEndDate ?? dateAfter(9));
-  const [roomCount, setRoomCount] = useState(initialRoomCount ?? 1);
-  const [availability, setAvailability] = useState<Availability | null>(initialAvailability ?? null);
-  const [reservation, setReservation] = useState<Reservation | null>(null);
-  const [isChecking, setIsChecking] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
-  const [isPaying, setIsPaying] = useState(false);
-  const [isCanceling, setIsCanceling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [state, dispatch] = useReducer(bookingReducer, {
+    startDate: initialStartDate ?? dateAfter(7),
+    endDate: initialEndDate ?? dateAfter(9),
+    roomCount: initialRoomCount ?? 1,
+    availability: initialAvailability ?? null,
+    reservation: null,
+    pending: null,
+    error: null,
+    isAuthOpen: false,
+  });
+  const { startDate, endDate, roomCount, availability, reservation, pending, error, isAuthOpen } = state;
+  const isChecking = pending === 'checking';
+  const isBooking = pending === 'booking';
+  const isPaying = pending === 'paying';
+  const isCanceling = pending === 'canceling';
 
   async function checkAvailability(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setReservation(null);
-    setIsChecking(true);
+    dispatch({ type: 'request', pending: 'checking' });
 
     try {
       const result = await hotelApi.availability(hotel.id, roomType.id, startDate, endDate, roomCount);
-      setAvailability(result);
-      if (!result.canBook) setError(`Only ${result.minAvailableRooms} room${result.minAvailableRooms === 1 ? '' : 's'} available for these dates.`);
+      const error = result.canBook ? null : `Only ${result.minAvailableRooms} room${result.minAvailableRooms === 1 ? '' : 's'} available for these dates.`;
+      dispatch({ type: 'availabilityLoaded', availability: result, error });
     } catch (requestError) {
-      setAvailability(null);
-      setError(messageForError(requestError));
-    } finally {
-      setIsChecking(false);
+      dispatch({ type: 'availabilityFailed', error: messageForError(requestError) });
     }
   }
 
@@ -65,8 +65,7 @@ export default function BookingForm({ hotel, roomType, isSignedIn, initialStartD
     // One persisted ID per stay: a retry (even after a reload) reuses it, so the POST stays idempotent.
     const stay = { hotelId: hotel.id, roomTypeId: roomType.id, startDate, endDate, roomCount };
     const reservationId = getOrCreateReservationKey(stay);
-    setError(null);
-    setIsBooking(true);
+    dispatch({ type: 'request', pending: 'booking' });
 
     try {
       const result = await customerApi.createReservation({
@@ -78,53 +77,40 @@ export default function BookingForm({ hotel, roomType, isSignedIn, initialStartD
         roomCount,
       });
       clearReservationKey(stay);
-      setReservation(result);
+      dispatch({ type: 'reservationUpdated', reservation: result });
     } catch (requestError) {
-      if (requestError instanceof ApiError && requestError.isUnauthorized) setIsAuthOpen(true);
       if (requestError instanceof ApiError && requestError.isConflict) clearReservationKey(stay);
-      setError(messageForError(requestError));
-    } finally {
-      setIsBooking(false);
+      dispatch({ type: 'failed', error: messageForError(requestError), requireAuth: requestError instanceof ApiError && requestError.isUnauthorized });
     }
   }
 
-  function editStay(change: () => void) {
-    change();
-    setAvailability(null);
-    setError(null);
+  function editStay(changes: Partial<Pick<BookingState, 'startDate' | 'endDate' | 'roomCount'>>) {
+    dispatch({ type: 'editStay', changes });
   }
 
   function bookAnother() {
-    setReservation(null);
-    setAvailability(null);
-    setError(null);
+    dispatch({ type: 'reset' });
   }
 
   async function payReservation(approved: boolean) {
     if (!reservation) return;
-    setError(null);
-    setIsPaying(true);
+    dispatch({ type: 'request', pending: 'paying' });
 
     try {
-      setReservation(await customerApi.payReservation(reservation.reservationId, approved));
+      dispatch({ type: 'reservationUpdated', reservation: await customerApi.payReservation(reservation.reservationId, approved) });
     } catch (requestError) {
-      setError(messageForError(requestError));
-    } finally {
-      setIsPaying(false);
+      dispatch({ type: 'failed', error: messageForError(requestError) });
     }
   }
 
   async function cancelReservation() {
     if (!reservation || !['pending', 'paid'].includes(reservation.status)) return;
-    setError(null);
-    setIsCanceling(true);
+    dispatch({ type: 'request', pending: 'canceling' });
 
     try {
-      setReservation(await customerApi.cancelReservation(reservation.reservationId));
+      dispatch({ type: 'reservationUpdated', reservation: await customerApi.cancelReservation(reservation.reservationId) });
     } catch (requestError) {
-      setError(messageForError(requestError));
-    } finally {
-      setIsCanceling(false);
+      dispatch({ type: 'failed', error: messageForError(requestError) });
     }
   }
 
@@ -135,15 +121,15 @@ export default function BookingForm({ hotel, roomType, isSignedIn, initialStartD
       <form className="booking-form" onSubmit={checkAvailability}>
         <label>
           Check-in
-          <input type="date" value={startDate} min={dateAfter(0)} onChange={(event) => editStay(() => setStartDate(event.target.value))} required />
+          <input type="date" value={startDate} min={dateAfter(0)} onChange={(event) => editStay({ startDate: event.target.value })} required />
         </label>
         <label>
           Check-out
-          <input type="date" value={endDate} min={startDate} onChange={(event) => editStay(() => setEndDate(event.target.value))} required />
+          <input type="date" value={endDate} min={startDate} onChange={(event) => editStay({ endDate: event.target.value })} required />
         </label>
         <label>
           Rooms
-          <input type="number" min="1" value={roomCount} onChange={(event) => editStay(() => setRoomCount(Number(event.target.value)))} required />
+          <input type="number" min="1" value={roomCount} onChange={(event) => editStay({ roomCount: Number(event.target.value) })} required />
         </label>
         <button type="submit" disabled={isChecking || isBooking}>{isChecking ? 'Checking availability...' : availability ? 'Re-check availability' : 'Check availability'}</button>
       </form>
@@ -155,7 +141,7 @@ export default function BookingForm({ hotel, roomType, isSignedIn, initialStartD
             <span>{hotel.name} · {roomType.name}</span>
             <span>{startDate} → {endDate} · {availability.nights} night{availability.nights === 1 ? '' : 's'} · {roomCount} room{roomCount === 1 ? '' : 's'}</span>
           </div>
-          {isSignedIn ? <button type="button" onClick={createReservation} disabled={isBooking}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => setIsAuthOpen(true)}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
+          {isSignedIn ? <button type="button" onClick={createReservation} disabled={isBooking}>{isBooking ? 'Booking...' : 'Book this stay'}</button> : <button className="button-link" type="button" onClick={() => dispatch({ type: 'setAuthOpen', open: true })}>Sign in to book <span aria-hidden="true">-&gt;</span></button>}
         </div>
       )}
       {reservation && (
@@ -169,7 +155,7 @@ export default function BookingForm({ hotel, roomType, isSignedIn, initialStartD
         </div>
       )}
       {error && <p className="booking-error" role="alert">{error}</p>}
-      <AuthModal open={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal open={isAuthOpen} onClose={() => dispatch({ type: 'setAuthOpen', open: false })} />
     </section>
   );
 }
