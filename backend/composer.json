@@ -54,6 +54,7 @@
             "@auto-scripts"
         ],
         "test": "vendor/bin/phpunit",
+        "test:coverage": "php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text",
         "lint": "php-cs-fixer fix --dry-run --diff && phpstan analyse"
     },
     "config": {

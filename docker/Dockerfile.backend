@@ -34,8 +34,8 @@ RUN apk add --no-cache \
         pdo_pgsql \
         zip \
         opcache \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && pecl install redis pcov \
+    && docker-php-ext-enable redis pcov \
     && apk del $PHPIZE_DEPS
 
 COPY --from=composer_deps /usr/bin/composer /usr/bin/composer
@@ -48,6 +48,7 @@ RUN { \
         echo 'opcache.memory_consumption=256'; \
         echo 'realpath_cache_size=4096K'; \
         echo 'realpath_cache_ttl=600'; \
+        echo 'pcov.enabled=0'; \
     } > /usr/local/etc/php/conf.d/symfony-prod.ini
 
 WORKDIR /app

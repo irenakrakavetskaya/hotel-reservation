@@ -10,5 +10,10 @@ export default defineConfig({
     exclude: ['node_modules/**', '.next/**'],
     clearMocks: true,
     unstubGlobals: true,
+    coverage: {
+      provider: 'v8',
+      include: ['app/**', 'components/**', 'lib/**'],
+      reporter: ['text', 'html'],
+    },
   },
 });

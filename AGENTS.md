@@ -62,6 +62,8 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
 - Backend data jobs: `php bin/console app:inventory:prepopulate --backfill` and
   `php bin/console app:rates:recompute`.
 - Backend tests: from `backend/`, run `composer test` or `vendor/bin/phpunit`.
+  Coverage: `composer test:coverage` (needs `pcov`, installed in `Dockerfile.backend`; run it in the
+  container with the `*_test` DB command below). Frontend coverage: `npm run test:coverage`.
 - Backend lint and static analysis: from `backend/`, run `composer lint`.
 - Full local stack: from `docker/`, run `docker compose up`.
 - Frontend checks, from `frontend/`: `npm run lint`, `npm run typecheck`, and
