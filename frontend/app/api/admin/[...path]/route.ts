@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { apiBaseUrl } from '../../../../lib/api';
+import { isCrossOrigin } from '../../../../lib/same-origin';
 import { getAccessToken } from '../../../../lib/server-api';
 
 // Browser forms call this same-origin proxy so the httpOnly access_token cookie never reaches client JS.
@@ -14,6 +15,10 @@ async function forward(request: Request, { params }: Context): Promise<Response>
   const path = (await params).path.join('/');
   if (!ALLOWED_PATH.test(path) || !METHODS.has(request.method)) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  }
+
+  if (isCrossOrigin(request)) {
+    return NextResponse.json({ error: 'Cross-origin requests are not allowed.' }, { status: 403 });
   }
 
   const token = await getAccessToken();

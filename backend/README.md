@@ -23,7 +23,9 @@ The API uses `POST /v1/auth/login` with JSON fields `email` and `password`.
 Public registration is available at `POST /v1/auth/register` with JSON fields
 `email`, `password`, and `passwordConfirmation`. Passwords must be 8-255
 characters, and registration always assigns `ROLE_USER`. Staff/admin accounts
-remain trusted-provisioned.
+remain trusted-provisioned. Login failures are throttled (5 per minute per
+username + IP) and registration is limited to 10 per 15 minutes per client IP
+(429 with `Retry-After`); both limiters store state in the app cache (Redis).
 
 The Next.js frontend stores the returned JWT in an HttpOnly, SameSite=Lax
 cookie. Set `AUTH_COOKIE_SECURE=false` for local HTTP and `true` for HTTPS.

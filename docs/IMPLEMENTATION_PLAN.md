@@ -63,9 +63,12 @@ Pre-populated 2 years out by a scheduled job (Symfony Messenger + cron, or a `sy
 
 Matches the spec given, implemented as Symfony controllers under `/v1`:
 
-- `POST /v1/auth/login` — returns a JWT for a registered user.
+- `POST /v1/auth/login` — returns a JWT for a registered user. Failed attempts are
+  throttled by the firewall's `login_throttling` (5 per minute per username + IP);
+  further attempts are rejected with 401 "Too many failed login attempts".
 - `POST /v1/auth/register` — public sign-up (`email`, `password`,
-  `passwordConfirmation`); always creates `ROLE_USER`.
+  `passwordConfirmation`); always creates `ROLE_USER`. Rate limited per client IP
+  (10 per 15 minutes, `register` limiter); excess requests get 429 with `Retry-After`.
 - `GET /v1/admin/users?search&limit&offset` — admin-only user listing.
 - `PUT /v1/admin/users/{id}/roles` — admin-only; body `{"roles": ["ROLE_STAFF"]}`.
   Guarded by `UserManagementVoter` (`USER_MANAGE`, requires `ROLE_ADMIN`).

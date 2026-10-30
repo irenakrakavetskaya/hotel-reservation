@@ -68,4 +68,17 @@ describe('customer proxy route', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('down')));
     expect((await POST(post({}), ctx('payments'))).status).toBe(503);
   });
+
+  it('rejects cross-origin mutations with 403 without calling the API', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const request = new Request('http://localhost/api/customer/reservations', {
+      method: 'POST',
+      headers: { origin: 'https://evil.example', host: 'localhost' },
+      body: '{}',
+    });
+
+    expect((await POST(request, ctx('reservations'))).status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

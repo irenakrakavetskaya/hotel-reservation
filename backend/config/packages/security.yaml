@@ -16,6 +16,9 @@ security:
             pattern: ^/v1/auth/login$
             stateless: true
             provider: app_user_provider
+            login_throttling:
+                max_attempts: 5
+                interval: '1 minute'
             json_login:
                 check_path: auth_login
                 username_path: email
@@ -31,5 +34,12 @@ security:
     access_control:
         - { path: ^/v1/auth/login$, roles: PUBLIC_ACCESS, methods: [POST] }
         - { path: ^/v1/auth/register$, roles: PUBLIC_ACCESS, methods: [POST] }
-        - { path: ^/v1/hotels, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/v1/hotels(/|$), roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/v1, roles: ROLE_USER }
+
+when@test:
+    security:
+        firewalls:
+            auth_login:
+                login_throttling:
+                    cache_pool: cache.rate_limiter_test

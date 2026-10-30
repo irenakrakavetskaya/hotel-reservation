@@ -6,6 +6,12 @@ framework:
         enabled: true
     validation:
         email_validation_mode: html5
+    rate_limiter:
+        # Per-IP cap on public sign-ups; login is throttled by the security firewall.
+        register:
+            policy: sliding_window
+            limit: 10
+            interval: '15 minutes'
     messenger:
         transports:
             scheduler_default: 'sync://'
@@ -18,3 +24,13 @@ framework:
 when@test:
     framework:
         test: true
+        cache:
+            pools:
+                # The array app cache is reset between requests, which would hide throttling;
+                # AuthThrottlingTest clears this pool before and after each test.
+                cache.rate_limiter_test:
+                    adapter: cache.adapter.filesystem
+                    public: true
+        rate_limiter:
+            register:
+                cache_pool: cache.rate_limiter_test
