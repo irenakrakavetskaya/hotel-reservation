@@ -8,7 +8,7 @@ stages:
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
       when: never
     - if: '$CI_COMMIT_BRANCH'
     - if: '$CI_COMMIT_TAG'
@@ -111,12 +111,11 @@ test:backend:
       alias: postgres
   variables:
     APP_ENV: test
-    POSTGRES_DB: hotel_reservations
+    POSTGRES_DB: hotel_reservations_test
     POSTGRES_USER: hotel
     POSTGRES_PASSWORD: hotel
     POSTGRES_HOST_AUTH_METHOD: trust
-    # Base database name: doctrine.yaml adds the "_test" suffix in the test env.
-    DATABASE_URL: "postgresql://hotel:hotel@postgres:5432/hotel_reservations?serverVersion=18&charset=utf8"
+    DATABASE_URL: "postgresql://hotel:hotel@postgres:5432/hotel_reservations_test?serverVersion=18&charset=utf8"
     JWT_PASSPHRASE: "ci-test-passphrase"
   script:
     - cd backend
@@ -207,9 +206,11 @@ deploy:staging:
     url: https://staging.example.com
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: true
   script:
-    - TAG="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
-    - echo "TODO: pull and deploy $BACKEND_IMAGE:$TAG and $FRONTEND_IMAGE:$TAG to staging (APP_ENV=prod)"
+    - echo "Staging deployment is not configured. Configure a deploy target and replace this placeholder."
+    - exit 1
 
 deploy:production:
   extends: .deploy_template
@@ -219,6 +220,7 @@ deploy:production:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG'
       when: manual
+      allow_failure: true
   script:
-    - TAG="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
-    - echo "TODO: pull and deploy $BACKEND_IMAGE:$TAG and $FRONTEND_IMAGE:$TAG to production (APP_ENV=prod)"
+    - echo "Production deployment is not configured. Configure a deploy target and replace this placeholder."
+    - exit 1

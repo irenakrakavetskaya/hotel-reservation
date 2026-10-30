@@ -202,8 +202,8 @@ auth, voter, last-admin protection and validation.
 
 ## 7. Deployment
 
-- `docker/Dockerfile.backend` — multi-stage: composer install → PHP-FPM + Nginx (or FrankenPHP) runtime.
-- `docker/Dockerfile.frontend` — multi-stage: `npm ci && npm run build` → `next start` (or standalone output) runtime image.
+- `docker/Dockerfile.backend` — multi-stage: Composer dependencies → PHP-FPM runtime; Nginx is a separate reverse-proxy container in the local Compose stack.
+- `docker/Dockerfile.frontend` — multi-stage: `npm ci && npm run build` → Next.js standalone runtime image. The Dockerfile defaults to Node 22, matching CI.
 - `docker-compose.yml` — `backend`, `frontend`, `scheduler`, `postgres`, `redis`, `nginx` (reverse proxy on `:8090`), for local dev.
   - The `frontend` image is a build, not source-mounted: rebuild with
     `docker compose up -d --build frontend` after frontend changes. The backend
@@ -218,9 +218,30 @@ auth, voter, last-admin protection and validation.
   endings (`.gitattributes`), which PER-CS requires.
 - `.gitlab-ci.yml` stages: `lint → test → build → deploy`.
   - `lint`: php-cs-fixer + phpstan (backend), eslint + tsc (frontend).
-  - `test`: PHPUnit (with a throwaway Postgres service container) + frontend unit tests.
-  - `build`: build & push both Docker images to the GitLab registry, tagged with commit SHA.
-  - `deploy`: environment-gated (manual for prod), pulls tagged images.
+  - `test`: PHPUnit against a PostgreSQL 18 service and the dedicated
+    `hotel_reservations_test` database, plus frontend unit tests.
+  - `build`: only on the default branch and tags; builds and pushes both images
+    to the GitLab registry. Images use the Git tag on tag pipelines or the
+    short commit SHA on default-branch pipelines; `latest` is updated only by
+    default-branch builds.
+  - Workflow rules keep merge-request pipelines and suppress duplicate branch
+    pipelines only for pushes to branches with open merge requests. Backend
+    and frontend lint/test jobs run for their changed areas on other branches
+    and merge requests, and always on the default branch and tags.
+  - `deploy`: staging and production are manual placeholders, not real
+    deployments. Running either placeholder exits with an explicit
+    "deployment is not configured" error; the optional jobs do not block
+    pipeline success.
+- Before enabling real deployment, choose and provision the target and
+  deployment mechanism, set real environment URLs, and replace both placeholder
+  scripts. Configure protected GitLab environment-scoped variables for
+  deployment credentials and runtime settings; never put secrets in the
+  repository or bake them into images. The target must pull the matching
+  commit/tag images and provide backend `APP_ENV=prod`, `APP_SECRET`,
+  `DATABASE_URL`, `REDIS_URL`, and `JWT_PASSPHRASE`, plus frontend
+  `AUTH_COOKIE_SECURE`, `API_SERVER_URL`, and `NEXT_PUBLIC_API_URL`. Add an
+  explicit migration, health-check, and rollback procedure before production
+  deployment is enabled. Keep production manual-gated until rollback is agreed.
 
 ## 8. Build order (suggested milestones)
 

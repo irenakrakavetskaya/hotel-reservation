@@ -13,6 +13,35 @@ A modular hotel reservation platform for browsing hotels and rooms, checking ava
 
 The backend is organized as a Symfony modular monolith. Domain code lives under `backend/src/Domain/{Hotel,Reservation,Rate,Payment,User}`.
 
+## GitLab CI
+
+The pipeline in [`.gitlab-ci.yml`](./.gitlab-ci.yml) runs `lint → test → build → deploy`.
+Merge requests get their own pipelines; duplicate branch pipelines are
+suppressed for pushes when an open merge request already exists. On other
+branches and merge requests, backend and frontend lint/test jobs are selected
+by changed paths; both areas are checked on the default branch and tags.
+
+- Backend checks use PHP 8.4. PHPUnit runs against the PostgreSQL 18 service
+  and the dedicated `hotel_reservations_test` database.
+- Frontend lint and tests use Node 22. The frontend Docker image also defaults
+  to Node 22.
+- Docker images are built and pushed only on the default branch and tags. They
+  are tagged with the short commit SHA or Git tag; `latest` is updated only on
+  default-branch builds.
+- Staging and production deployment jobs are manual placeholders. They do not
+  deploy to a server; if run, they fail with a clear not-configured message
+  and do not block the rest of the pipeline.
+
+Before real deployment is enabled, choose and provision a deployment target,
+set its real environment URLs, and replace both placeholder scripts with the
+target-specific deployment mechanism. Configure deployment credentials as
+protected GitLab CI/CD variables (prefer environment-scoped variables and file
+variables where appropriate), not in source or in the images. The deployment
+must provide the runtime settings listed in `.gitlab-ci.yml`, pull the
+commit/tag-specific images, and define database migration, health-check, and
+rollback procedures. Keep production manual-gated until a rollback approach
+has been agreed.
+
 ## Run With Docker
 
 Start the existing images and services from the repository root:

@@ -6,7 +6,7 @@
 #
 # Requires `output: 'standalone'` in next.config.js/ts.
 
-ARG NODE_VERSION=20
+ARG NODE_VERSION=22
 
 # ---------- Stage 1: dependencies ----------
 FROM node:${NODE_VERSION}-alpine AS deps
