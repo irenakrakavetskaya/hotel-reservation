@@ -14,6 +14,7 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
 | Database | PostgreSQL 18+ |
 | Cache / inventory fast-path | Redis |
 | Frontend | Next.js 16 |
+| Report worker | Go, RabbitMQ |
 | Deployment | Docker + `.gitlab-ci.yml` |
 
 ## Services (logical, may start as modules in one Symfony app — see `docs/IMPLEMENTATION_PLAN.md` Phase 0 for the monolith-first decision)
@@ -23,6 +24,7 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
 - **Reservation Service** — reservation writes, inventory tracking, cancellations. Owns `room_type_inventory` and `reservation` tables in the same DB (hybrid approach — do not split these into separate databases without a strong reason; cross-DB transactions defeat the constraint-based concurrency guarantee).
 - **Payment Service** — stub/mock for v1 unless a real processor is specified; must move reservation `status` between `pending → paid | rejected`.
 - **Hotel Management Service** — staff-only endpoints layered over Hotel + Reservation services with role checks.
+- **Report Worker** — reads reservation data with a read-only role, generates PDFs, and publishes results to Symfony via RabbitMQ.
 
 ## Non-negotiable invariants
 
@@ -45,6 +47,7 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
   /migrations
 /frontend            Next.js 16 app (App Router): public browse/booking, login/register,
                      /reservations, /admin; same-origin proxies under app/api/{admin,customer}
+/report-worker       Go worker for asynchronous reservation PDF reports
 /docker              Compose and backend/frontend Dockerfiles
   docker-compose.yml
   Dockerfile.backend
@@ -65,6 +68,7 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
   Coverage: `composer test:coverage` (needs `pcov`, installed in `Dockerfile.backend`; run it in the
   container with the `*_test` DB command below). Frontend coverage: `npm run test:coverage`.
 - Backend lint and static analysis: from `backend/`, run `composer lint`.
+- Report worker tests: from `report-worker/`, run `go test ./...`.
 - Full local stack: from `docker/`, run `docker compose up`.
 - Frontend checks, from `frontend/`: `npm run lint`, `npm run typecheck`, and
   `npm test` (Vitest + React Testing Library, tests in `frontend/tests/`; `npm run test:watch` for watch
@@ -74,7 +78,7 @@ Backend integration tests must run against a `*_test` database (they truncate ta
 In Docker, run from `docker/`: `docker compose exec -T -u root -e DATABASE_URL='postgresql://hotel:hotel@postgres:5432/hotel_reservations_test?serverVersion=18&charset=utf8' -e APP_ENV=test backend sh -c 'cd /app && php bin/console doctrine:migrations:migrate -n; vendor/bin/phpunit; chown -R $(stat -c %u:%g /app/src) /app/var'`
 (backend is mounted at `/app`; the `chown` keeps host-side `composer test`/lint working).
 
-For local backend prerequisites and API notes, read [backend/README.md](backend/README.md).
+For local backend prerequisites and API notes, read [README.md](README.md).
 For the data model, API contract, concurrency design, and testing priorities, read
 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
@@ -82,6 +86,7 @@ For the data model, API contract, concurrency design, and testing priorities, re
 
 - Before backend changes, read `.claude/rules/backend-symfony.md`; before frontend
   changes, read `.claude/rules/frontend-nextjs.md`.
+- Before report worker changes, read `.claude/rules/report-worker-go.md`.
 - For reservation or inventory changes, also read `.claude/skills/reservation-domain/SKILL.md`.
 - For a new `/v1` endpoint, read `.claude/skills/api-scaffold/SKILL.md`.
 - Read `.claude/rules/git-and-ci.md` before changing migrations, reservation writes,

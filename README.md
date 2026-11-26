@@ -9,10 +9,12 @@ A modular hotel reservation platform for browsing hotels and rooms, checking ava
 - Cache: Redis 7
 - Frontend: Next.js 16, React 19, TypeScript
 - Proxy: Nginx
+- Reports: RabbitMQ and a Go PDF worker
 - Report notifications: Centrifugo WebSockets
 - Deployment: Docker Compose and GitLab CI
 
-The backend is organized as a Symfony modular monolith. Domain code lives under `backend/src/Domain/{Hotel,Reservation,Rate,Payment,User}`.
+The backend is organized as a Symfony modular monolith. Domain code lives under
+`backend/src/Domain/{Hotel,Reservation,Rate,Payment,User,Report}`.
 
 ## GitLab CI
 
@@ -83,16 +85,6 @@ The HTTP port can be changed without editing the Compose file:
 HTTP_PORT=8091 docker compose -f docker/docker-compose.yml up
 ```
 
-The local Centrifugo allowed origin follows `HTTP_PORT`. If the browser uses a
-different hostname or an HTTPS proxy, set `CENTRIFUGO_ALLOWED_ORIGINS` to the
-exact public origin. Staff report updates use WebSockets with a 30-second HTTP
-reconciliation fallback; PDF downloads remain HTTP.
-
-For deployment, set distinct, strong `CENTRIFUGO_API_KEY` and
-`CENTRIFUGO_TOKEN_SECRET` values and the correct `CENTRIFUGO_ALLOWED_ORIGINS`.
-The Compose defaults are for local development only. Centrifugo's HTTP API is
-private to the Compose network; only its WebSocket route is proxied by Nginx.
-
 For local HTTP development, keep the auth cookie non-secure:
 
 ```bash
@@ -127,6 +119,10 @@ docker compose -f docker/docker-compose.yml exec backend \
   php bin/console app:demo:seed
 ```
 
+The seed adds demo users, hotels, rooms, inventory, rates, and four reservations
+without deleting existing records. It requires the Redis extension; use the
+container if the host PHP runtime does not have it.
+
 Demo credentials:
 
 - Customer: `demo@example.com` / `demo-password`
@@ -151,9 +147,14 @@ From `backend/`:
 
 ```bash
 composer install
-composer test
 composer lint
 ```
+
+Generate JWT keys and run `php bin/console doctrine:migrations:migrate` when
+setting up the backend outside Docker. Backend integration tests truncate
+tables and must use a dedicated `*_test` database; run `composer test` only
+with `DATABASE_URL` pointing to that database. The Docker test command is
+documented in [AGENTS.md](AGENTS.md).
 
 Git hooks live in `.githooks/`. Enable them once per clone:
 
@@ -166,17 +167,89 @@ git config core.hooksPath .githooks
 `composer test` (needs the `hotel_reservations_test` database) and `npm test`.
 Bypass with `--no-verify` when necessary.
 
-Generate local JWT keys when using the backend outside Docker:
+## API and Authentication
 
-```bash
-php bin/console lexik:jwt:generate-keypair
-```
-
-Authentication is available through `POST /v1/auth/login` with `email` and
-`password`. Public registration is available through
+Authentication uses `POST /v1/auth/login` with `email` and `password`.
+Public registration is available through
 `POST /v1/auth/register` with `email`, `password`, and
-`passwordConfirmation`. Self-registration always creates `ROLE_USER`; staff
-and admin roles remain trusted-provisioned.
+`passwordConfirmation`. Passwords must be 8–255 characters. Registration
+always creates `ROLE_USER`; staff and admin roles are provisioned by trusted
+administrators. Login is limited to five failed attempts per minute per
+username and IP; registration is limited to ten requests per 15 minutes per client IP.
+Registration returns 429 with `Retry-After` when limited. Both limiters use
+the app cache (Redis).
+
+`ROLE_ADMIN` inherits `ROLE_STAFF`. Admins can manage roles using
+`GET /v1/admin/users?search&limit&offset` and
+`PUT /v1/admin/users/{id}/roles` with `{"roles":["ROLE_STAFF"]}`. The last
+admin cannot be demoted (409). Bootstrap the first admin with
+`php bin/console app:user:promote <email> --role=ROLE_ADMIN`. The frontend
+reflects role changes at the next login because its JWT contains roles; the
+API reloads current roles from the database for each request.
+
+Room types are available at `/v1/hotels/{hotelId}/room-types`: reads are
+public, while writes require staff access. Public availability checks use
+`GET /v1/hotels/{hotelId}/room-types/{roomTypeId}/availability` with
+`startDate`, `endDate`, and optional `roomCount` (default `1`).
+
+Reservation creation, history, payment and cancellation require authentication.
+The client supplies `reservationID` when creating a reservation and reuses it
+for retries. History is `GET /v1/reservations`, mock payment is
+`POST /v1/payments` with `reservationID` and boolean `approved`, and
+cancellation is `DELETE /v1/reservations/{id}`. Payment transitions pending
+reservations to paid or rejected.
+
+Redis provides cache-aside reads for hotels, room types, rooms, availability,
+rates, and inventory. Writes invalidate or refresh affected cached data after
+successful database writes.
+
+## Reservation Reports
+
+Staff and admins can generate PDF summaries at `/admin/reports`. Choose an
+inclusive UTC date range of at most one year; the end date cannot be in the
+future. The report filters by reservation creation date, counts current
+reservation statuses, and totals the current `paid` reservations in USD. It
+does not represent historical payment or revenue figures.
+
+The staff-only API provides:
+
+- `POST /v1/admin/reports` with `{"from":"YYYY-MM-DD","to":"YYYY-MM-DD"}`
+  to request a report.
+- `GET /v1/admin/reports` to list the latest 50 reports and
+  `GET /v1/admin/reports/{id}` to fetch one report's status.
+- `GET /v1/admin/reports/{id}/download` to download a completed PDF; an
+  unfinished report returns 409.
+- `GET /v1/admin/realtime/token` to obtain a short-lived connection token.
+
+Report creation records an outbox entry with the job. The scheduler publishes
+pending entries to RabbitMQ every 10 seconds, the Go worker generates the PDF,
+and the Symfony results consumer updates the report status (`pending`,
+`processing`, `done`, or `failed`). PDFs are stored in the shared
+`reports_data` volume, mounted read-only by the API. The worker writes files
+with group-read access for PHP-FPM's `www-data` group ID 82; other deployments
+must grant the API equivalent access.
+
+The Compose stack supplies development defaults for `RABBITMQ_USER`,
+`RABBITMQ_PASSWORD`, `REPORT_DB_USER`, and `REPORT_DB_PASSWORD`; configure
+them for deployment. RabbitMQ's AMQP port is bound to localhost by default.
+See [Database Setup](#database-setup) for automatic report-reader provisioning.
+
+After committed report changes, Symfony sends best-effort invalidations to
+Centrifugo. Staff browsers receive them over WebSockets and fetch authoritative
+report state over HTTP; the page also reconciles every 30 seconds and on
+reconnection. The separate connection token expires after two minutes.
+Existing WebSocket tokens remain usable until expiry after logout or a role
+change; token refresh checks current API authorization. Immediate revocation
+requires an additional disconnect/revocation mechanism.
+
+The local Centrifugo allowed origin follows `HTTP_PORT`. If using another
+hostname or HTTPS, set `CENTRIFUGO_ALLOWED_ORIGINS` to the exact public browser
+origin. For deployment, configure distinct, strong `CENTRIFUGO_API_KEY` and
+`CENTRIFUGO_TOKEN_SECRET` values; the defaults are for development only.
+Centrifugo's HTTP API is private to the Compose network; Nginx exposes only
+its WebSocket route.
+
+Run the Go worker tests from `report-worker/` with `go test ./...`.
 
 ## Frontend Development
 
@@ -204,6 +277,7 @@ The frontend includes these user flows:
 - `/hotels/{hotelId}/room-types/{roomTypeId}/availability` for public availability checks
 - `/register` and `/login`
 - `/reservations` for authenticated history, payment, and cancellation states
+- `/admin` for staff management and `/admin/reports` for PDF reports
 
 JWTs are never stored in browser local storage. Next.js route handlers keep the
 JWT in an HttpOnly, SameSite=Lax cookie and redirect successful auth to
@@ -216,6 +290,7 @@ JWT in an HttpOnly, SameSite=Lax cookie and redirect successful auth to
 - The database `check_room_count` constraint enforces the 10% overbooking ceiling.
 - Stay dates use the half-open interval `[startDate, endDate)`.
 - PostgreSQL is the source of truth; Redis is only a read accelerator.
+- Cancellation rejects a partial inventory release and rolls back the transaction.
 
 Read [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the data model, API contract, concurrency design, pricing, caching, and testing priorities.
 
