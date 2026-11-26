@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 async function loadHotelOptions(): Promise<HotelOption[]> {
   try {
-    return (await getHotels()).map(({ id, name }) => ({ id, name }));
+    return (await getHotels()).map(({ id, name, city }) => ({ id, name, city }));
   } catch {
     return [];
   }

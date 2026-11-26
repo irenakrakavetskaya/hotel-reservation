@@ -3,7 +3,7 @@
 import { useId, useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
-export type HotelOption = { id: number; name: string };
+export type HotelOption = { id: number; name: string; city: string };
 
 type SearchFormProps = { hotels: HotelOption[] };
 
@@ -42,8 +42,14 @@ export default function SearchForm({ hotels }: SearchFormProps) {
   const suggestions = useMemo(() => {
     const needle = destination.trim().toLowerCase();
     if (!needle) return [];
-    const matches = hotels.filter((hotel) => hotel.name.toLowerCase().includes(needle));
-    matches.sort((a, b) => Number(!a.name.toLowerCase().startsWith(needle)) - Number(!b.name.toLowerCase().startsWith(needle)));
+    const matches = hotels.filter((hotel) => (
+      hotel.name.toLowerCase().includes(needle) || hotel.city.toLowerCase().includes(needle)
+    ));
+    matches.sort((a, b) => {
+      const aStartsWithQuery = a.name.toLowerCase().startsWith(needle) || a.city.toLowerCase().startsWith(needle);
+      const bStartsWithQuery = b.name.toLowerCase().startsWith(needle) || b.city.toLowerCase().startsWith(needle);
+      return Number(!aStartsWithQuery) - Number(!bStartsWithQuery);
+    });
     return matches.slice(0, MAX_SUGGESTIONS);
   }, [destination, hotels]);
 
@@ -141,7 +147,8 @@ export default function SearchForm({ hotels }: SearchFormProps) {
                   selectSuggestion(hotel);
                 }}
               >
-                {hotel.name}
+                <span>{hotel.name}</span>
+                <span className="suggestion-list__location">{hotel.city}</span>
               </li>
             ))}
           </ul>

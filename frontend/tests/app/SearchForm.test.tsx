@@ -7,9 +7,9 @@ const router = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
 
 const hotels = [
-  { id: 1, name: 'Hotel Gamma' },
-  { id: 3, name: 'Northline House' },
-  { id: 4, name: 'Morrow Bay Hotel' },
+  { id: 1, name: 'Hotel Gamma', city: 'Paris' },
+  { id: 3, name: 'Northline House', city: 'Seattle' },
+  { id: 4, name: 'Morrow Bay Hotel', city: 'Morrow Bay' },
 ];
 
 const destination = () => screen.getByRole('combobox');
@@ -32,8 +32,17 @@ describe('SearchForm', () => {
   it('suggests hotels while typing, prefix matches first', async () => {
     render(<SearchForm hotels={hotels} />);
     await userEvent.type(destination(), 'ho');
-    const options = screen.getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['Hotel Gamma', 'Northline House', 'Morrow Bay Hotel']);
+    const options = screen.getAllByRole('option').map((option) => (
+      Array.from(option.querySelectorAll('span'), (span) => span.textContent).join(' ')
+    ));
+    expect(options).toEqual(['Hotel Gamma Paris', 'Northline House Seattle', 'Morrow Bay Hotel Morrow Bay']);
+  });
+
+  it('suggests hotels by city and selects one of them', async () => {
+    render(<SearchForm hotels={hotels} />);
+    await userEvent.type(destination(), 'seattle{ArrowDown}{Enter}');
+    expect(destination()).toHaveValue('Northline House');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('selects a suggestion with the keyboard', async () => {
