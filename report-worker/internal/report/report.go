@@ -1,5 +1,7 @@
 package report
 
+//report logic: validation, database aggregation, and PDF output.
+
 import (
 	"context"
 	"database/sql"
@@ -18,6 +20,7 @@ import (
 var statuses = []string{"pending", "paid", "refunded", "canceled", "rejected"}
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
+// The queue message, JSON tags match the contract
 type Job struct {
 	Event       string `json:"event"`
 	ReportID    string `json:"report_id"`
@@ -28,12 +31,15 @@ type Job struct {
 	RequestedAt string `json:"requested_at"`
 }
 
+// Calculation: count per status, paid total in cents, generation time.
 type Result struct {
 	Counts         map[string]int64
 	PaidTotalCents int64
 	GeneratedAt    time.Time
 }
 
+// Check a job before any work starts.
+// Return nil if everything is fine, otherwise a descriptive error.
 func Validate(job Job, now time.Time) error {
 	if job.Event != "report.generate.v1" {
 		return errors.New("unsupported report event")
@@ -71,11 +77,15 @@ func Validate(job Job, now time.Time) error {
 	return nil
 }
 
+// Must be a valid UUID
 func ValidReportID(id string) bool {
 	return uuidPattern.MatchString(id)
 }
 
+// Read the data and calculate the numbers.
 func Aggregate(ctx context.Context, db *sql.DB, job Job) (Result, error) {
+	//Open a read-only, repeatable-read transaction, so both queries see the same snapshot 
+	// of data even if reservations change meanwhile.
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
 		return Result{}, fmt.Errorf("begin report read transaction: %w", err)
@@ -138,6 +148,7 @@ func Aggregate(ctx context.Context, db *sql.DB, job Job) (Result, error) {
 	}, nil
 }
 
+//Create the PDF file and return its file name
 func WritePDF(job Job, result Result, directory string) (string, error) {
 	if err := os.MkdirAll(directory, 0o750); err != nil {
 		return "", fmt.Errorf("create report directory: %w", err)
@@ -154,6 +165,7 @@ func WritePDF(job Job, result Result, directory string) (string, error) {
 	}
 	defer os.Remove(tmpPath)
 
+	//Build the PDF with gofpdf (A4)
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetTitle("Reservation Summary", false)
 	pdf.SetMargins(15, 16, 15)
@@ -203,6 +215,7 @@ func WritePDF(job Job, result Result, directory string) (string, error) {
 	return filepath.Base(finalPath), nil
 }
 
+//Convert an integer amount in cents to a string like $1,234.56
 func formatUSD(cents int64) string {
 	negative := cents < 0
 	if negative {

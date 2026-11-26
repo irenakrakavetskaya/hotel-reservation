@@ -17,6 +17,12 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
+/*
+Program entry point.
+Creates a JSON logger (slog) that writes to stdout.
+Calls run(logger).
+If run returns an error, logs it and exits with code 1.
+*/
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	if err := run(logger); err != nil {
@@ -34,7 +40,7 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	db := stdlib.OpenDB(*config)
+	db := stdlib.OpenDB(*config) //Open the DB pool
 	defer db.Close()
 
 	startupCtx, startupCancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -47,10 +53,14 @@ func run(logger *slog.Logger) error {
 		}
 		time.Sleep(2 * time.Second)
 	}
+
+	//Limit the pool to 2 open and 1 idle connection
 	db.SetMaxOpenConns(2)
 	db.SetMaxIdleConns(1)
 
 	reportDirectory := envOr("REPORTS_DIR", "/data/reports")
+
+	//Create the worker
 	reportWorker, err := worker.New(db, amqpURL, reportDirectory, logger)
 	if err != nil {
 		return err
@@ -69,6 +79,8 @@ func run(logger *slog.Logger) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	serverErrors := make(chan error, 1)
+
+	//Start the health HTTP server
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			serverErrors <- err
@@ -76,23 +88,30 @@ func run(logger *slog.Logger) error {
 	}()
 
 	workerErrors := make(chan error, 1)
+
+	//Start the worker in another goroutine and sends its result to workerErrors
 	go func() {
 		workerErrors <- reportWorker.Run(ctx)
 	}()
 
+	//Wait for the first event with select:
 	var result error
 	select {
 	case <-ctx.Done():
-	case result = <-serverErrors:
+	case result = <-serverErrors: //server fails
 		stop()
-	case result = <-workerErrors:
+	case result = <-workerErrors: //worker stops or fails.
 		stop()
 	}
+
+	//Shut down the server with a 10 s timeout
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		result = errors.Join(result, fmt.Errorf("shut down health server: %w", err))
 	}
+
+	//Return the combined error, or nil.
 	if result != nil {
 		return result
 	}
@@ -100,6 +119,7 @@ func run(logger *slog.Logger) error {
 	return nil
 }
 
+// Build the PostgreSQL connection settings from environment variables
 func databaseConfig() (*pgx.ConnConfig, error) {
 	host, err := requiredEnv("DB_HOST")
 	if err != nil {
@@ -136,6 +156,8 @@ func databaseConfig() (*pgx.ConnConfig, error) {
 	return config, nil
 }
 
+// Return the environment variable, or the error KEY is required
+// if it is empty. Startup fail early with a clear message.
 func requiredEnv(key string) (string, error) {
 	value := os.Getenv(key)
 	if value == "" {
@@ -145,6 +167,7 @@ func requiredEnv(key string) (string, error) {
 	return value, nil
 }
 
+// Returns the environment variable, or the fallback if it is
 func envOr(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
