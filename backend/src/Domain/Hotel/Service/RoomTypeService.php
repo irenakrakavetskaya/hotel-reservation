@@ -77,6 +77,7 @@ final class RoomTypeService
             throw $e;
         }
 
+        $this->inventoryReconciler->invalidateAvailability($hotelId, (int) $roomType->getId());
         $this->cacheVersions->bump(CacheScopes::roomTypeRead($hotelId));
 
         return $roomType;

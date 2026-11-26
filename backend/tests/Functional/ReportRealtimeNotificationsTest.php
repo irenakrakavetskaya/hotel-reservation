@@ -57,7 +57,7 @@ final class ReportRealtimeNotificationsTest extends WebTestCase
         $second = $service->create($userId, new \DateTimeImmutable('2026-01-01'), new \DateTimeImmutable('2026-01-02'));
         $secondId = $second->getId()->toRfc4122();
         $connection->executeStatement("UPDATE report_outbox SET published_at = now() WHERE report_id = ?", [$id]);
-        $connection->executeStatement("UPDATE report_outbox SET attempt_count = 9, payload = '{}' WHERE report_id = ?", [$secondId]);
+        $connection->executeStatement("UPDATE report_outbox SET attempt_count = 9, payload = '{}', available_at = now() - INTERVAL '1 second' WHERE report_id = ?", [$secondId]);
         $publisher = new ReportOutboxPublisher($connection, $this->createStub(MessageBusInterface::class), new NullLogger(), $realtime);
         $publisher->publishBatch();
         self::assertSame(['pending', 'processing', 'done', 'pending', 'failed'], $observed);

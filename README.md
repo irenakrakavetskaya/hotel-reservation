@@ -25,7 +25,8 @@ branches and merge requests, backend and frontend lint/test jobs are selected
 by changed paths; both areas are checked on the default branch and tags.
 
 - Backend checks use PHP 8.4. PHPUnit runs against the PostgreSQL 18 service
-  and the dedicated `hotel_reservations_test` database.
+  and the dedicated `hotel_reservations_test` database. A separate Redis service
+  runs the atomic cache-version integration test.
 - Frontend lint and tests use Node 22. The frontend Docker image also defaults
   to Node 22.
 - Docker images are built and pushed only on the default branch and tags. They
@@ -116,6 +117,27 @@ remains available; inspect collector failures with:
 docker compose -f docker/docker-compose.yml logs log-collector
 ```
 
+## Redis Monitoring
+
+Run an on-demand health and metrics check:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend php bin/console app:redis:status
+```
+
+The command reports connection failures, used and maximum memory, and Redis
+keyspace hits, misses and their cumulative hit rate. It exits unsuccessfully
+when Redis cannot be reached and warns when configured `maxmemory` usage
+reaches 85%. A `maxmemory` of zero means Redis has no configured limit. Redis
+metrics cover the whole server, including scheduler and rate-limiter operations,
+not just application cache requests. These checks are on demand; they do not
+provide automatic alerts or historical graphs.
+
+Cache generations are incremented atomically in Redis. Inventory invalidation
+happens after committed changes, so rolled-back room changes do not publish
+uncommitted inventory. Redis remains important for rate limiting and scheduler
+state as well as caching.
+
 ## Database Setup
 
 Compose applies migrations and runs the report-reader seed automatically.
@@ -178,6 +200,10 @@ setting up the backend outside Docker. Backend integration tests truncate
 tables and must use a dedicated `*_test` database; run `composer test` only
 with `DATABASE_URL` pointing to that database. The Docker test command is
 documented in [AGENTS.md](AGENTS.md).
+
+The Redis integration test additionally requires `TEST_REDIS_URL` pointing
+to an isolated Redis instance; it is skipped when that variable is unset.
+The test uses uniquely named keys and does not flush Redis.
 
 Git hooks live in `.githooks/`. Enable them once per clone:
 

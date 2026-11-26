@@ -101,14 +101,15 @@ lint:frontend:
 # the normal PHPUnit suite — it needs a real Postgres to exercise the
 # check_room_count constraint, which is why this job has a Postgres service
 # rather than mocking the database.
-# No Redis service: the test environment uses cache.adapter.array. Re-add
-# `redis:7-alpine` and REDIS_URL if a test needs a real Redis.
+# The dedicated Redis service is used by the Redis integration tests.
 test:backend:
   extends: [.php, .backend_rules]
   stage: test
   services:
     - name: postgres:18-alpine
       alias: postgres
+    - name: redis:7-alpine
+      alias: redis
   variables:
     APP_ENV: test
     POSTGRES_DB: hotel_reservations_test
@@ -116,6 +117,7 @@ test:backend:
     POSTGRES_PASSWORD: hotel
     POSTGRES_HOST_AUTH_METHOD: trust
     DATABASE_URL: "postgresql://hotel:hotel@postgres:5432/hotel_reservations_test?serverVersion=18&charset=utf8"
+    TEST_REDIS_URL: "redis://redis:6379"
     JWT_PASSPHRASE: "ci-test-passphrase"
   script:
     - cd backend

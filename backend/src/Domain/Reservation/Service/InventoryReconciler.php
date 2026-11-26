@@ -44,6 +44,10 @@ final class InventoryReconciler
             throw $e;
         }
 
+    }
+
+    public function invalidateAvailability(int $hotelId, int $roomTypeId): void
+    {
         $this->cacheVersions->bump(CacheScopes::availabilityRead($hotelId, $roomTypeId));
     }
 }

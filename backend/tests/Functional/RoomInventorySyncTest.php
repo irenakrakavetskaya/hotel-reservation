@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Domain\Reservation\Service\InventoryPrepopulationJob;
+use App\Infrastructure\Cache\CacheScopes;
+use App\Infrastructure\Cache\ReadCacheVersionService;
 use App\Domain\User\Entity\User;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -65,20 +67,27 @@ final class RoomInventorySyncTest extends WebTestCase
 
     public function testMovingARoomBetweenTypesAdjustsBothTypes(): void
     {
+        $this->client->disableReboot();
         $source = $this->createRoomType('Standard');
         $target = $this->createRoomType('Deluxe');
         $roomId = $this->createRoom($source, '201');
         $this->createRoom($source, '202');
+        $versions = self::getContainer()->get(ReadCacheVersionService::class);
+        $sourceVersion = $versions->getVersion(CacheScopes::availabilityRead($this->hotelId, $source));
+        $targetVersion = $versions->getVersion(CacheScopes::availabilityRead($this->hotelId, $target));
 
         $this->request('PUT', sprintf('/v1/hotels/%d/rooms/%d', $this->hotelId, $roomId), ['roomTypeId' => $target, 'roomNumber' => '201']);
 
         self::assertResponseStatusCodeSame(200);
         self::assertSame([1], $this->distinctInventory($source));
         self::assertSame([1], $this->distinctInventory($target));
+        self::assertGreaterThan($sourceVersion, $versions->getVersion(CacheScopes::availabilityRead($this->hotelId, $source)));
+        self::assertGreaterThan($targetVersion, $versions->getVersion(CacheScopes::availabilityRead($this->hotelId, $target)));
     }
 
     public function testChangeBelowHeldReservationsIsRejectedAndNothingChanges(): void
     {
+        $this->client->disableReboot();
         $roomTypeId = $this->createRoomType('Standard');
         $roomId = $this->createRoom($roomTypeId, '301');
         $this->createRoom($roomTypeId, '302');
@@ -88,12 +97,15 @@ final class RoomInventorySyncTest extends WebTestCase
             'UPDATE room_type_inventory SET total_reserved = 2 WHERE room_type_id = :r AND date = :d',
             ['r' => $roomTypeId, 'd' => $heldDate],
         );
+        $versions = self::getContainer()->get(ReadCacheVersionService::class);
+        $version = $versions->getVersion(CacheScopes::availabilityRead($this->hotelId, $roomTypeId));
 
         // 2 rooms -> ceiling 2; dropping to 1 room -> ceiling 1 < 2 held.
         $this->request('PUT', sprintf('/v1/hotels/%d/rooms/%d', $this->hotelId, $roomId), ['roomTypeId' => $roomTypeId, 'roomNumber' => '301', 'status' => 'inactive']);
         self::assertResponseStatusCodeSame(409);
         self::assertSame([2], $this->distinctInventory($roomTypeId));
         self::assertSame('active', $this->connection()->fetchOne('SELECT status FROM room WHERE id = :id', ['id' => $roomId]));
+        self::assertSame($version, $versions->getVersion(CacheScopes::availabilityRead($this->hotelId, $roomTypeId)));
 
         $this->request('DELETE', sprintf('/v1/hotels/%d/rooms/%d', $this->hotelId, $roomId));
         self::assertResponseStatusCodeSame(409);

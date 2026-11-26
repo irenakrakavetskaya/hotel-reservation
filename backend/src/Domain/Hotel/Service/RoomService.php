@@ -77,6 +77,7 @@ final class RoomService
             $this->saveOrThrowOnDuplicate($room, $hotelId, $request->roomNumber);
             $this->inventoryReconciler->reconcileRoomType($hotelId, (int) $room->getRoomType()->getId());
         });
+        $this->inventoryReconciler->invalidateAvailability($hotelId, (int) $room->getRoomType()->getId());
         $this->cacheVersions->bump(CacheScopes::roomRead($hotelId));
 
         return $room;
@@ -104,6 +105,11 @@ final class RoomService
                 $this->inventoryReconciler->reconcileRoomType($hotelId, $newRoomTypeId);
             }
         });
+        $this->inventoryReconciler->invalidateAvailability($hotelId, $previousRoomTypeId);
+        $newRoomTypeId = (int) $room->getRoomType()->getId();
+        if ($newRoomTypeId !== $previousRoomTypeId) {
+            $this->inventoryReconciler->invalidateAvailability($hotelId, $newRoomTypeId);
+        }
         $this->cacheVersions->bump(CacheScopes::roomRead($hotelId));
 
         return $room;
@@ -121,6 +127,7 @@ final class RoomService
             $this->roomRepository->remove($room);
             $this->inventoryReconciler->reconcileRoomType($hotelId, $roomTypeId);
         });
+        $this->inventoryReconciler->invalidateAvailability($hotelId, $roomTypeId);
         $this->cacheVersions->bump(CacheScopes::roomRead($hotelId));
     }
 

@@ -8,6 +8,8 @@ use App\Domain\Reservation\Entity\RoomTypeInventory;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Cache\CacheItemPoolInterface;
+use App\Infrastructure\Cache\CacheScopes;
+use App\Infrastructure\Cache\ReadCacheVersionService;
 
 /**
  * @extends ServiceEntityRepository<RoomTypeInventory>
@@ -19,8 +21,11 @@ use Psr\Cache\CacheItemPoolInterface;
  */
 class RoomTypeInventoryRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry, private readonly CacheItemPoolInterface $cache)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly CacheItemPoolInterface $cache,
+        private readonly ReadCacheVersionService $cacheVersions,
+    ) {
         parent::__construct($registry, RoomTypeInventory::class);
     }
 
@@ -39,6 +44,7 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
         \DateTimeImmutable $startDate,
         \DateTimeImmutable $endDate,
     ): array {
+        $version = $this->cacheVersions->getVersion(CacheScopes::availabilityRead($hotelId, $roomTypeId));
         $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
             <<<'SQL'
                 SELECT date, total_inventory, total_reserved
@@ -61,10 +67,12 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
         foreach ($rows as $row) {
             $maxReservable = RoomTypeInventory::overbookingCeiling((int) $row['total_inventory']);
             $availableRooms = max(0, $maxReservable - (int) $row['total_reserved']);
-            $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, (string) $row['date']));
+            $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, (string) $row['date'], $version));
             $cacheItem->set($availableRooms);
             $cacheItem->expiresAfter(300);
-            $this->cache->save($cacheItem);
+            if (!$this->cache->save($cacheItem)) {
+                throw new \RuntimeException('Unable to cache room availability.');
+            }
 
             $result[$row['date']] = [
                 'total_inventory' => (int) $row['total_inventory'],
@@ -89,10 +97,11 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
         \DateTimeImmutable $endDate,
         int $roomCount,
     ): bool {
+        $version = $this->cacheVersions->getVersion(CacheScopes::availabilityRead($hotelId, $roomTypeId));
         $allDatesCached = true;
         for ($cursor = $startDate; $cursor < $endDate; $cursor = $cursor->modify('+1 day')) {
             $date = $cursor->format('Y-m-d');
-            $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, $date));
+            $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, $date, $version));
             $cachedValue = $cacheItem->get();
 
             if (!$cacheItem->isHit() || !is_int($cachedValue)) {
@@ -139,13 +148,12 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
      */
     public function upsertInventoryDay(int $hotelId, int $roomTypeId, \DateTimeImmutable $date, int $totalInventory): void
     {
-        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+        $this->getEntityManager()->getConnection()->executeStatement(
             <<<'SQL'
                 INSERT INTO room_type_inventory (hotel_id, room_type_id, date, total_inventory, total_reserved, updated_at)
                 VALUES (:hotelId, :roomTypeId, :date, :totalInventory, 0, now())
                 ON CONFLICT (hotel_id, room_type_id, date)
                 DO UPDATE SET total_inventory = EXCLUDED.total_inventory, updated_at = now()
-                RETURNING date, total_inventory, total_reserved
                 SQL,
             [
                 'hotelId' => $hotelId,
@@ -155,24 +163,13 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
             ],
         );
 
-        if (false !== $row) {
-            $maxReservable = RoomTypeInventory::overbookingCeiling((int) $row['total_inventory']);
-            $availableRooms = max(0, $maxReservable - (int) $row['total_reserved']);
-            $cacheItem = $this->cache->getItem($this->buildAvailabilityKey($hotelId, $roomTypeId, (string) $row['date']));
-            $cacheItem->set($availableRooms);
-            $cacheItem->expiresAfter(300);
-            $this->cache->save($cacheItem);
-        }
     }
 
     /**
      * Same upsert as {@see upsertInventoryDay()} but for an entire date
      * range in one round trip via `generate_series`, rather than one
-     * statement per day. Used by the daily pre-population job
-     * (docs/IMPLEMENTATION_PLAN.md §8 step 2) to extend the rolling ~2-year
-     * window — `total_inventory` for a room type doesn't vary by date the
-     * way pricing does, so a single batched write is safe and much cheaper
-     * than looping.
+     * statement per day. The room inventory reconciler calls this within
+     * the room change transaction and invalidates caches after commit.
      */
     public function upsertInventoryWindow(
         int $hotelId,
@@ -198,7 +195,6 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
             ],
         );
 
-        $this->refreshAvailabilityCacheForRange($hotelId, $roomTypeId, $startDate, $endDate->modify('+1 day'));
     }
 
     public function refreshAvailabilityCacheForRange(
@@ -210,8 +206,8 @@ class RoomTypeInventoryRepository extends ServiceEntityRepository
         $this->findAvailability($hotelId, $roomTypeId, $startDate, $endDate);
     }
 
-    private function buildAvailabilityKey(int $hotelId, int $roomTypeId, string $date): string
+    private function buildAvailabilityKey(int $hotelId, int $roomTypeId, string $date, int $version): string
     {
-        return sprintf('inventory.%d.%d.%s.available', $hotelId, $roomTypeId, $date);
+        return sprintf('inventory.%d.%d.%s.%d.available', $hotelId, $roomTypeId, $date, $version);
     }
 }

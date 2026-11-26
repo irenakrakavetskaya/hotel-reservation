@@ -53,10 +53,7 @@ final class InventoryPrepopulationJob
         $today = $today ?? new \DateTimeImmutable('today');
         $horizon = $today->modify(sprintf('+%d days', self::WINDOW_DAYS));
 
-        $touchedScopes = $this->populateDate($horizon);
-        foreach (array_keys($touchedScopes) as $scope) {
-            $this->cacheVersions->bump($scope);
-        }
+        $this->populateDate($horizon);
 
         $this->logger->info('Inventory window extended to {date}.', ['date' => $horizon->format('Y-m-d')]);
     }
@@ -72,16 +69,8 @@ final class InventoryPrepopulationJob
     {
         $today = $today ?? new \DateTimeImmutable('today');
         $end = $today->modify(sprintf('+%d days', self::WINDOW_DAYS));
-        $touchedScopes = [];
-
         for ($date = $today; $date <= $end; $date = $date->modify('+1 day')) {
-            foreach ($this->populateDate($date) as $scope => $unused) {
-                $touchedScopes[$scope] = true;
-            }
-        }
-
-        foreach (array_keys($touchedScopes) as $scope) {
-            $this->cacheVersions->bump($scope);
+            $this->populateDate($date);
         }
 
         $this->logger->info(
@@ -90,15 +79,10 @@ final class InventoryPrepopulationJob
         );
     }
 
-    /**
-     * @return array<string, true> cache scopes that need version bumps
-     */
-    private function populateDate(\DateTimeImmutable $date): array
+    private function populateDate(\DateTimeImmutable $date): void
     {
         /** @var list<RoomType> $roomTypes */
         $roomTypes = $this->roomTypeRepository->findAll();
-        $touchedScopes = [];
-
         foreach ($roomTypes as $roomType) {
             $hotelId = $roomType->getHotel()->getId();
             $roomTypeId = $roomType->getId();
@@ -106,9 +90,7 @@ final class InventoryPrepopulationJob
             $activeRoomCount = $this->roomRepository->countActiveByHotelAndRoomType($hotelId, $roomTypeId);
 
             $this->inventoryRepository->upsertInventoryDay($hotelId, $roomTypeId, $date, $activeRoomCount);
-            $touchedScopes[CacheScopes::availabilityRead($hotelId, $roomTypeId)] = true;
+            $this->cacheVersions->bump(CacheScopes::availabilityRead($hotelId, $roomTypeId));
         }
-
-        return $touchedScopes;
     }
 }

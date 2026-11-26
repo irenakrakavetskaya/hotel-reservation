@@ -9,6 +9,13 @@ services:
     App\:
         resource: '../src/'
 
+    Redis:
+        class: Redis
+        factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']
+        arguments: ['%env(REDIS_URL)%']
+
+    App\Infrastructure\Cache\CacheVersionCounter: '@App\Infrastructure\Cache\RedisCacheVersionCounter'
+
     App\Domain\User\Repository\UserRepository:
         tags: ['doctrine.repository_service']
 
@@ -24,3 +31,7 @@ services:
             $url: '%env(CENTRIFUGO_URL)%'
             $apiKey: '%env(CENTRIFUGO_API_KEY)%'
             $tokenSecret: '%env(CENTRIFUGO_TOKEN_SECRET)%'
+
+when@test:
+    services:
+        App\Infrastructure\Cache\CacheVersionCounter: '@App\Infrastructure\Cache\ArrayCacheVersionCounter'
