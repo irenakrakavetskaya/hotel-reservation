@@ -18,3 +18,9 @@ services:
     App\Domain\Report\Service\ReportFileStorage:
         arguments:
             $directory: '%env(default:app.reports_directory:REPORTS_DIR)%'
+
+    App\Domain\Report\Service\ReportRealtime:
+        arguments:
+            $url: '%env(CENTRIFUGO_URL)%'
+            $apiKey: '%env(CENTRIFUGO_API_KEY)%'
+            $tokenSecret: '%env(CENTRIFUGO_TOKEN_SECRET)%'

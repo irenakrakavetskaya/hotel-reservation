@@ -38,7 +38,8 @@ Role management is admin-only (`ROLE_ADMIN`, which inherits `ROLE_STAFF` via
 `role_hierarchy`): `GET /v1/admin/users?search&limit&offset` and
 `PUT /v1/admin/users/{id}/roles` with `{"roles": ["ROLE_STAFF"]}`. The last
 admin cannot be demoted (409). Role changes take effect at the user's next
-login because roles are embedded in the JWT (1h TTL). Bootstrap the first admin
+login in the frontend because roles are embedded in the JWT (1h TTL); the API
+loads current roles from the database for each request. Bootstrap the first admin
 with `php bin/console app:user:promote <email> --role=ROLE_ADMIN`.
 
 The frontend `/admin` area (staff/admin only, guarded server-side from the JWT)
@@ -64,6 +65,19 @@ mounted read-only in the API container. The worker writes PDFs with group-read
 permissions using the PHP-FPM `www-data` group ID (82); other deployments must
 give the API process equivalent read access. RabbitMQ's AMQP port is bound to
 localhost only by default.
+
+Report status invalidations are published best-effort to Centrifugo after
+commits. Staff browsers obtain a separate two-minute connection token from
+`GET /v1/admin/realtime/token`, subscribe automatically to `staff-reports`,
+and fetch report data through the existing authenticated HTTP API. The page
+reconciles every 30 seconds even when connected, and after reconnecting.
+Configure distinct production `CENTRIFUGO_API_KEY` and
+`CENTRIFUGO_TOKEN_SECRET` values and set `CENTRIFUGO_ALLOWED_ORIGINS` to the
+public browser origin; the Compose defaults are development-only. The HTTP
+publish API is not exposed by Nginx. A role change is checked on token
+refresh, but existing WebSocket tokens remain usable until expiry; logout
+removes the browser cookie but does not revoke already issued tokens. Immediate
+revocation requires an additional disconnect/revocation mechanism.
 
 Mock payment settlement is available at `POST /v1/payments` with body fields
 `reservationID` (UUID) and `approved` (boolean). It updates reservation status

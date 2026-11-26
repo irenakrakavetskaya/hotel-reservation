@@ -1,12 +1,18 @@
 'use client';
 
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { Centrifuge } from 'centrifuge';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { ApiError, adminReportApi, type ReservationReport } from '../../lib/api';
 
-const POLL_INTERVAL = 2500;
+const RECONCILE_INTERVAL = 30000;
+const REPORT_CHANNEL = 'staff-reports';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isActive(report: ReservationReport): boolean {
-  return report.status === 'pending' || report.status === 'processing';
+function reportIdFromEvent(data: unknown): string | null {
+  if (typeof data !== 'object' || data === null || !('version' in data) || data.version !== 1
+    || !('type' in data) || data.type !== 'report.changed'
+    || !('reportId' in data) || typeof data.reportId !== 'string' || !UUID.test(data.reportId)) return null;
+  return data.reportId;
 }
 
 function errorMessage(error: unknown): string {
@@ -21,38 +27,84 @@ export default function ReportsPanel() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    const latest = await adminReportApi.list();
-    setReports(latest);
-    setError(null);
-  }, []);
+  const [liveUnavailable, setLiveUnavailable] = useState(false);
+  const reportsRef = useRef<ReservationReport[]>([]);
+  const requestRefresh = useRef<() => void>(() => {});
 
   useEffect(() => {
     let active = true;
-    adminReportApi.list()
-      .then((latest) => {
-        if (active) setReports(latest);
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(errorMessage(cause));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    let running = false;
+    let listPending = false;
+    const ids = new Set<string>();
 
-    return () => { active = false; };
+    async function reconcile() {
+      if (running) return;
+      running = true;
+      while (active && (listPending || ids.size > 0)) {
+        const refreshList = listPending;
+        const id = refreshList ? undefined : ids.values().next().value;
+        if (refreshList) {
+          listPending = false;
+          ids.clear();
+        } else if (id) {
+          ids.delete(id);
+        }
+        try {
+          const latest = refreshList || !id || !reportsRef.current.some((report) => report.id === id)
+            ? await adminReportApi.list()
+            : null;
+          const report = !latest && id ? await adminReportApi.get(id) : null;
+          if (!active) break;
+          const next = latest ?? (report
+            ? reportsRef.current.map((item) => item.id === report.id ? report : item)
+            : reportsRef.current);
+          reportsRef.current = next;
+          setReports(next);
+          setError(null);
+        } catch (cause: unknown) {
+          if (active) setError(errorMessage(cause));
+        } finally {
+          if (active) setLoading(false);
+        }
+      }
+      running = false;
+    }
+
+    function queueList() {
+      listPending = true;
+      void reconcile();
+    }
+    requestRefresh.current = queueList;
+    queueList();
+
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const client = new Centrifuge(`${scheme}//${window.location.host}/connection/websocket`, {
+      getToken: async () => (await adminReportApi.realtimeToken()).token,
+    });
+    client.on('connected', () => {
+      if (!active) return;
+      setLiveUnavailable(false);
+      queueList();
+    });
+    client.on('connecting', () => { if (active) setLiveUnavailable(true); });
+    client.on('disconnected', () => { if (active) setLiveUnavailable(true); });
+    client.on('publication', (context) => {
+      if (!active || context.channel !== REPORT_CHANNEL) return;
+      const id = reportIdFromEvent(context.data as unknown);
+      if (!id) return;
+      ids.add(id);
+      void reconcile();
+    });
+    client.connect();
+    const timer = window.setInterval(queueList, RECONCILE_INTERVAL);
+
+    return () => {
+      active = false;
+      requestRefresh.current = () => {};
+      window.clearInterval(timer);
+      client.disconnect();
+    };
   }, []);
-
-  useEffect(() => {
-    if (!reports.some(isActive)) return;
-
-    const timer = window.setTimeout(() => {
-      refresh().catch((cause: unknown) => setError(errorMessage(cause)));
-    }, POLL_INTERVAL);
-
-    return () => window.clearTimeout(timer);
-  }, [refresh, reports]);
 
   async function generate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +112,10 @@ export default function ReportsPanel() {
     setError(null);
     try {
       const report = await adminReportApi.create(from, to);
-      setReports((current) => [report, ...current.filter((item) => item.id !== report.id)]);
+      const next = [report, ...reportsRef.current.filter((item) => item.id !== report.id)];
+      reportsRef.current = next;
+      setReports(next);
+      requestRefresh.current();
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -85,6 +140,7 @@ export default function ReportsPanel() {
       </form>
 
       {error && <p className="booking-error" role="alert">{error}</p>}
+      {liveUnavailable && <p role="status">Live updates are unavailable; reports will refresh automatically.</p>}
 
       <section aria-labelledby="recent-reports-heading">
         <h2 id="recent-reports-heading">Recent reports</h2>

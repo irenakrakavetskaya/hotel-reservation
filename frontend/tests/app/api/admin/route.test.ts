@@ -104,6 +104,18 @@ describe('admin proxy route', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('only forwards GET for the realtime token and preserves no-store', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"token":"socket-token"}', {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const response = await GET(new Request('http://localhost/api/admin/admin/realtime/token'), ctx('admin', 'realtime', 'token'));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer jwt-token');
+    expect((await POST(post({}), ctx('admin', 'realtime', 'token'))).status).toBe(404);
+  });
+
   it('rejects cross-origin mutations with 403 without calling the API', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

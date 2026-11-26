@@ -9,6 +9,11 @@ use App\Domain\Report\Message\ReportResultMessage;
 use App\Domain\Report\Service\ReportService;
 use App\Tests\Functional\Support\CreatesTokens;
 use Doctrine\DBAL\Connection;
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Signer\Hmac\Sha256;
+use Lcobucci\JWT\Signer\Key\InMemory;
+use Lcobucci\JWT\UnencryptedToken;
+use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -50,6 +55,37 @@ final class ReportControllerTest extends WebTestCase
 
         $loaded = $this->request('GET', '/v1/admin/reports/' . $report['id'], $token);
         self::assertSame('pending', $loaded['status']);
+    }
+
+    public function testRealtimeTokenRequiresStaffAndHasScopedShortLivedClaims(): void
+    {
+        $staffToken = $this->tokenFor('staff@example.com', ['ROLE_STAFF']);
+        $userToken = $this->tokenFor('customer@example.com', ['ROLE_USER']);
+
+        $this->client->request('GET', '/v1/admin/realtime/token');
+        self::assertResponseStatusCodeSame(401);
+        $this->request('GET', '/v1/admin/realtime/token', $userToken);
+        self::assertResponseStatusCodeSame(403);
+
+        $body = $this->request('GET', '/v1/admin/realtime/token', $staffToken);
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('no-store', (string) $this->client->getResponse()->headers->get('Cache-Control'));
+        $secret = (string) ($_ENV['CENTRIFUGO_TOKEN_SECRET'] ?? $_SERVER['CENTRIFUGO_TOKEN_SECRET']);
+        $config = Configuration::forSymmetricSigner(new Sha256(), InMemory::plainText($secret));
+        $jwt = $config->parser()->parse($body['token']);
+        self::assertInstanceOf(UnencryptedToken::class, $jwt);
+        self::assertTrue($config->validator()->validate($jwt, new SignedWith($config->signer(), $config->verificationKey())));
+        self::assertSame('hotel-reservation', $jwt->claims()->get('iss'));
+        self::assertSame(['centrifugo'], $jwt->claims()->get('aud'));
+        self::assertSame(['staff-reports'], $jwt->claims()->get('channels'));
+        self::assertNotSame('', $jwt->claims()->get('sub'));
+        self::assertSame(120, $jwt->claims()->get('exp')->getTimestamp() - $jwt->claims()->get('iat')->getTimestamp());
+
+        /** @var Connection $connection */
+        $connection = self::getContainer()->get(Connection::class);
+        $connection->executeStatement('UPDATE app_user SET roles = ? WHERE email = ?', [json_encode(['ROLE_USER'], JSON_THROW_ON_ERROR), 'staff@example.com']);
+        $this->request('GET', '/v1/admin/realtime/token', $staffToken);
+        self::assertResponseStatusCodeSame(403);
     }
 
     public function testRejectsInvalidOrOverlongReportPeriod(): void

@@ -20,6 +20,7 @@ final class ReportOutboxPublisher
         private readonly Connection $connection,
         private readonly MessageBusInterface $messageBus,
         private readonly LoggerInterface $logger,
+        private readonly ReportRealtime $realtime,
     ) {}
 
     public function publishBatch(int $limit = 50): int
@@ -53,8 +54,11 @@ final class ReportOutboxPublisher
                     $this->connection->commit();
                     ++$published;
                 } catch (TransportException|\JsonException|\UnexpectedValueException $exception) {
-                    $this->recordFailure($row, $exception);
+                    $reportChanged = $this->recordFailure($row, $exception);
                     $this->connection->commit();
+                    if ($reportChanged) {
+                        $this->realtime->notify((string) $row['report_id']);
+                    }
                     $this->logger->error('Could not publish report generation request.', [
                         'report_id' => $row['report_id'],
                         'attempt_count' => (int) $row['attempt_count'] + 1,
@@ -102,13 +106,13 @@ final class ReportOutboxPublisher
     /**
      * @param array<string, mixed> $row
      */
-    private function recordFailure(array $row, \Throwable $exception): void
+    private function recordFailure(array $row, \Throwable $exception): bool
     {
         $attempt = (int) $row['attempt_count'] + 1;
         $error = mb_substr($exception->getMessage(), 0, 1000);
 
         if ($attempt >= self::MAX_ATTEMPTS) {
-            $this->connection->executeStatement(
+            $changed = $this->connection->executeStatement(
                 "UPDATE reservation_report SET status = 'failed', error_message = :error, started_at = COALESCE(started_at, now()), finished_at = now(), updated_at = now() WHERE id = :reportId AND status IN ('pending', 'processing')",
                 ['error' => 'Unable to queue report after repeated delivery failures.', 'reportId' => $row['report_id']],
             );
@@ -117,7 +121,7 @@ final class ReportOutboxPublisher
                 ['attempt' => $attempt, 'error' => $error, 'id' => $row['id']],
             );
 
-            return;
+            return $changed > 0;
         }
 
         $delay = min(300, 2 ** $attempt);
@@ -125,5 +129,7 @@ final class ReportOutboxPublisher
             "UPDATE report_outbox SET attempt_count = :attempt, available_at = now() + (:delay * INTERVAL '1 second'), last_error = :error WHERE id = :id",
             ['attempt' => $attempt, 'delay' => $delay, 'error' => $error, 'id' => $row['id']],
         );
+
+        return false;
     }
 }

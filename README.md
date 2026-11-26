@@ -9,6 +9,7 @@ A modular hotel reservation platform for browsing hotels and rooms, checking ava
 - Cache: Redis 7
 - Frontend: Next.js 16, React 19, TypeScript
 - Proxy: Nginx
+- Report notifications: Centrifugo WebSockets
 - Deployment: Docker Compose and GitLab CI
 
 The backend is organized as a Symfony modular monolith. Domain code lives under `backend/src/Domain/{Hotel,Reservation,Rate,Payment,User}`.
@@ -81,6 +82,16 @@ The HTTP port can be changed without editing the Compose file:
 ```bash
 HTTP_PORT=8091 docker compose -f docker/docker-compose.yml up
 ```
+
+The local Centrifugo allowed origin follows `HTTP_PORT`. If the browser uses a
+different hostname or an HTTPS proxy, set `CENTRIFUGO_ALLOWED_ORIGINS` to the
+exact public origin. Staff report updates use WebSockets with a 30-second HTTP
+reconciliation fallback; PDF downloads remain HTTP.
+
+For deployment, set distinct, strong `CENTRIFUGO_API_KEY` and
+`CENTRIFUGO_TOKEN_SECRET` values and the correct `CENTRIFUGO_ALLOWED_ORIGINS`.
+The Compose defaults are for local development only. Centrifugo's HTTP API is
+private to the Compose network; only its WebSocket route is proxied by Nginx.
 
 For local HTTP development, keep the auth cookie non-secure:
 

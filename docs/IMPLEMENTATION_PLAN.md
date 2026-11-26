@@ -111,9 +111,14 @@ Matches the spec given, implemented as Symfony controllers under `/v1`:
   calendar days; `to` cannot be in the future and the range is limited to one
   year.
 - `GET /v1/admin/reports` and `GET /v1/admin/reports/{id}` — staff/admin only;
-  list recent report jobs and poll their current status.
+  list recent report jobs and fetch their current status.
 - `GET /v1/admin/reports/{id}/download` — staff/admin only; stream the PDF only
   after the report is complete.
+- `GET /v1/admin/realtime/token` — staff/admin only; issue a no-store,
+  two-minute Centrifugo token for the shared `staff-reports` channel.
+  Post-commit invalidations contain only report IDs. Browsers fetch current
+  state via HTTP and reconcile periodically and on reconnect; delivery is
+  best-effort and does not replace the database as source of truth.
 
 Auth: Symfony Security with role-based voters (`ROLE_USER`, `ROLE_STAFF`, `ROLE_ADMIN`). JWT (LexikJWTAuthenticationBundle) for the API, since Next.js is a separate origin.
 
@@ -121,8 +126,10 @@ Auth: Symfony Security with role-based voters (`ROLE_USER`, `ROLE_STAFF`, `ROLE_
 every staff check. The JWT payload is `{iat, exp, roles, username}` with a 1h
 TTL, and `User::getRoles()` returns the stored roles plus `ROLE_USER` (no
 hierarchy expansion), so the frontend treats `ROLE_ADMIN` as staff itself.
-**Role changes take effect at the user's next login**; the backend still
-re-loads the user from the DB on each request.
+The frontend's JWT role display updates at the user's next login; the backend
+re-loads current roles from the DB on each request. Existing Centrifugo
+connections are not immediately revoked after logout or role changes: their
+two-minute tokens expire, and refresh rechecks API authorization.
 
 Domain exceptions are mapped to HTTP codes in `DomainExceptionListener`
 (e.g. `UserNotFoundException` → 404, `RoleChangeNotAllowedException` → 409).

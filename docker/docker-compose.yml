@@ -24,6 +24,9 @@ services:
       REDIS_URL: redis://redis:6379
       MESSENGER_REPORT_TRANSPORT_DSN: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/%2f
       REPORTS_DIR: /app/var/reports
+      CENTRIFUGO_URL: http://centrifugo:8000
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-local-development-api-key}
+      CENTRIFUGO_TOKEN_SECRET: ${CENTRIFUGO_TOKEN_SECRET:-local-development-token-secret-not-for-production}
     volumes:
       - ../backend:/app
       - backend_vendor:/app/vendor
@@ -93,6 +96,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
       REDIS_URL: redis://redis:6379
       MESSENGER_REPORT_TRANSPORT_DSN: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/%2f
+      CENTRIFUGO_URL: http://centrifugo:8000
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-local-development-api-key}
+      CENTRIFUGO_TOKEN_SECRET: ${CENTRIFUGO_TOKEN_SECRET:-local-development-token-secret-not-for-production}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -111,6 +117,9 @@ services:
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
       MESSENGER_REPORT_TRANSPORT_DSN: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/%2f
+      CENTRIFUGO_URL: http://centrifugo:8000
+      CENTRIFUGO_API_KEY: ${CENTRIFUGO_API_KEY:-local-development-api-key}
+      CENTRIFUGO_TOKEN_SECRET: ${CENTRIFUGO_TOKEN_SECRET:-local-development-token-secret-not-for-production}
     volumes:
       - ../backend:/app
       - backend_vendor:/app/vendor
@@ -147,6 +156,15 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6.6.2
+    environment:
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_SECRET:-local-development-token-secret-not-for-production}
+      CENTRIFUGO_CLIENT_TOKEN_AUDIENCE: centrifugo
+      CENTRIFUGO_CLIENT_TOKEN_ISSUER: hotel-reservation
+      CENTRIFUGO_CLIENT_ALLOWED_ORIGINS: ${CENTRIFUGO_ALLOWED_ORIGINS:-http://localhost:${HTTP_PORT:-8090}}
+      CENTRIFUGO_HTTP_API_KEY: ${CENTRIFUGO_API_KEY:-local-development-api-key}
 
   rabbitmq:
     image: rabbitmq:3-management

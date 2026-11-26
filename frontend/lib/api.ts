@@ -244,6 +244,18 @@ export const adminReportApi = {
       body: JSON.stringify({ from, to }),
     });
   },
+  get(id: string) {
+    return apiFetch<ReservationReport>(`/admin/reports/${id}`, {
+      baseUrl: ADMIN_PROXY,
+      cache: 'no-store',
+    });
+  },
+  realtimeToken() {
+    return apiFetch<{ token: string }>('/admin/realtime/token', {
+      baseUrl: ADMIN_PROXY,
+      cache: 'no-store',
+    });
+  },
 };
 
 export const authApi = {

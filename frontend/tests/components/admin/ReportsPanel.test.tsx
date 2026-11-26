@@ -4,10 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ReportsPanel from '../../../components/admin/ReportsPanel';
 import type { ReservationReport } from '../../../lib/api';
 
-const { list, create } = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn() }));
+const { list, create, get, realtimeToken, socket } = vi.hoisted(() => ({
+  list: vi.fn(), create: vi.fn(), get: vi.fn(), realtimeToken: vi.fn(),
+  socket: { handlers: {} as Record<string, (event: never) => void>, connect: vi.fn(), disconnect: vi.fn(), getToken: undefined as (() => Promise<string>) | undefined },
+}));
 vi.mock('../../../lib/api', () => ({
   ApiError: class ApiError extends Error {},
-  adminReportApi: { list, create },
+  adminReportApi: { list, create, get, realtimeToken },
+}));
+vi.mock('centrifuge', () => ({
+  Centrifuge: class {
+    constructor(_url: string, options: { getToken: () => Promise<string> }) { socket.getToken = options.getToken; }
+    on(name: string, handler: (event: never) => void) { socket.handlers[name] = handler; }
+    connect() { socket.connect(); }
+    disconnect() { socket.disconnect(); }
+  },
 }));
 
 const completedReport: ReservationReport = {
@@ -23,6 +34,12 @@ const completedReport: ReservationReport = {
 beforeEach(() => {
   list.mockReset().mockResolvedValue([]);
   create.mockReset();
+  get.mockReset();
+  realtimeToken.mockReset().mockResolvedValue({ token: 'realtime-token' });
+  socket.handlers = {};
+  socket.connect.mockReset();
+  socket.disconnect.mockReset();
+  socket.getToken = undefined;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -37,7 +54,9 @@ describe('ReportsPanel', () => {
   });
 
   it('submits the selected period and adds the pending report', async () => {
-    create.mockResolvedValue({ ...completedReport, status: 'pending', finishedAt: null });
+    const pending = { ...completedReport, status: 'pending', finishedAt: null };
+    create.mockResolvedValue(pending);
+    list.mockResolvedValueOnce([]).mockResolvedValue([pending]);
     render(<ReportsPanel />);
 
     await userEvent.type(screen.getByLabelText('From'), '2026-01-01');
@@ -61,7 +80,7 @@ describe('ReportsPanel', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('polls active reports and stops polling after completion', async () => {
+  it('reconciles periodically even when live updates are unavailable', async () => {
     vi.useFakeTimers();
     list
       .mockResolvedValueOnce([{ ...completedReport, status: 'processing', finishedAt: null }])
@@ -71,11 +90,65 @@ describe('ReportsPanel', () => {
     await act(async () => { await Promise.resolve(); });
     expect(list).toHaveBeenCalledTimes(1);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2500); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
     expect(list).toHaveBeenCalledTimes(2);
     expect(screen.getByRole('link', { name: 'Download PDF' })).toBeInTheDocument();
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+    expect(list).toHaveBeenCalledTimes(3);
+  });
+
+  it('updates a report from a valid event and refreshes unknown reports on reconnect', async () => {
+    const pending = { ...completedReport, status: 'pending', finishedAt: null };
+    list.mockResolvedValue([pending]);
+    get.mockResolvedValue(completedReport);
+    const { unmount } = render(<ReportsPanel />);
+    expect(await screen.findByText('pending')).toBeInTheDocument();
+
+    await act(async () => {
+      socket.handlers.publication({ channel: 'staff-reports', data: { version: 1, type: 'report.changed', reportId: completedReport.id } } as never);
+    });
+    expect(get).toHaveBeenCalledWith(completedReport.id);
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toBeInTheDocument();
+
+    await act(async () => {
+      socket.handlers.publication({ channel: 'staff-reports', data: { version: 1, type: 'report.changed', reportId: 'invalid' } } as never);
+      socket.handlers.connected(undefined as never);
+    });
+    expect(get).toHaveBeenCalledTimes(1);
     expect(list).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(socket.disconnect).toHaveBeenCalled();
+  });
+
+  it('refreshes again when an event arrives during an in-flight list request', async () => {
+    let resolveList!: (reports: ReservationReport[]) => void;
+    list.mockImplementationOnce(() => new Promise<ReservationReport[]>((resolve) => { resolveList = resolve; }))
+      .mockResolvedValue([completedReport]);
+    get.mockResolvedValue(completedReport);
+    render(<ReportsPanel />);
+    await act(async () => {
+      socket.handlers.publication({ channel: 'staff-reports', data: { version: 1, type: 'report.changed', reportId: completedReport.id } } as never);
+      resolveList([{ ...completedReport, status: 'pending', finishedAt: null }]);
+    });
+    expect(get).toHaveBeenCalledWith(completedReport.id);
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toBeInTheDocument();
+  });
+
+  it('refreshes unknown reports, retries tokens, and shows fallback status on disconnect', async () => {
+    list.mockResolvedValueOnce([]).mockResolvedValue([completedReport]);
+    render(<ReportsPanel />);
+    expect(await screen.findByText('No reports yet.')).toBeInTheDocument();
+    expect(await socket.getToken?.()).toBe('realtime-token');
+    expect(await socket.getToken?.()).toBe('realtime-token');
+    expect(realtimeToken).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      socket.handlers.connecting(undefined as never);
+      socket.handlers.publication({ channel: 'staff-reports', data: { version: 1, type: 'report.changed', reportId: completedReport.id } } as never);
+    });
+    expect(screen.getByText(/Live updates are unavailable/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toBeInTheDocument();
+    await act(async () => { socket.handlers.connected(undefined as never); });
+    expect(screen.queryByText(/Live updates are unavailable/)).not.toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@ const ALLOWED_PATH = /^(hotels(\/\d+(\/(room-types|rooms)(\/\d+)?)?)?|admin\/use
 const METHODS = new Set(['POST', 'PUT', 'DELETE']);
 const REPORT_COLLECTION_PATH = /^admin\/reports$/;
 const REPORT_READ_PATH = /^admin\/reports(?:\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:\/download)?)?$/i;
+const REALTIME_TOKEN_PATH = 'admin/realtime/token';
 
 type Context = { params: Promise<{ path: string[] }> };
 
@@ -17,7 +18,7 @@ async function forward(request: Request, { params }: Context): Promise<Response>
   const path = (await params).path.join('/');
   const isReportPath = REPORT_READ_PATH.test(path);
   const isAllowedReportMethod = (REPORT_COLLECTION_PATH.test(path) && request.method === 'POST')
-    || (isReportPath && request.method === 'GET');
+    || ((isReportPath || path === REALTIME_TOKEN_PATH) && request.method === 'GET');
   if (!isAllowedReportMethod && (!ALLOWED_PATH.test(path) || !METHODS.has(request.method))) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }

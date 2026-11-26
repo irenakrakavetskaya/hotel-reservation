@@ -19,6 +19,7 @@ final class ReportService
         private readonly EntityManagerInterface $entityManager,
         private readonly Connection $connection,
         private readonly ReportRepository $reports,
+        private readonly ReportRealtime $realtime,
     ) {}
 
     public function create(int $requesterId, \DateTimeImmutable $from, \DateTimeImmutable $to): ReservationReport
@@ -54,6 +55,8 @@ final class ReportService
             throw $exception;
         }
 
+        $this->realtime->notify($id->toRfc4122());
+
         return $report;
     }
 
@@ -71,6 +74,7 @@ final class ReportService
     public function applyWorkerResult(ReportResultMessage $message): void
     {
         $report = $this->get(Uuid::fromString($message->reportId));
+        $previousStatus = $report->getStatus();
 
         match ($message->status) {
             ReportStatus::Processing => $report->markProcessing(),
@@ -80,6 +84,9 @@ final class ReportService
         };
 
         $this->entityManager->flush();
+        if ($report->getStatus() !== $previousStatus) {
+            $this->realtime->notify($message->reportId);
+        }
     }
 
     private function markDone(ReservationReport $report, ?string $artifactKey): void
