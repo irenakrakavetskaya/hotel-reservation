@@ -44,23 +44,30 @@ has been agreed.
 
 ## Run With Docker
 
-Start the existing images and services from the repository root:
+For the first run, build and start the services from the repository root:
 
 ```bash
-docker compose -f docker/docker-compose.yml up
+docker compose -f docker/docker-compose.yml up -d --build
 ```
 
-For the first run, or after changing a Dockerfile or dependency manifest, rebuild the images:
-
-```bash
-docker compose -f docker/docker-compose.yml up --build
-```
-
-Run in the background:
+On subsequent runs, start the existing images with:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 ```
+
+After a deployment or changes to a Dockerfile or dependency manifest, rebuild:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+The one-shot `migrate` service waits for PostgreSQL, applies pending migrations
+and provisions the read-only report database role before the app and workers
+start. Each `up` runs the service again; Doctrine applies only new migrations.
+An error stops dependent services from starting. Existing running services are
+not stopped while migrations run, so deployments must use migrations compatible
+with the currently running application.
 
 The application is available at:
 
@@ -85,12 +92,12 @@ Set `AUTH_COOKIE_SECURE=true` when serving the frontend over HTTPS.
 
 ## Database Setup
 
-After the backend is running, apply migrations:
-
-```bash
-docker compose -f docker/docker-compose.yml exec backend \
-  php bin/console doctrine:migrations:migrate --no-interaction
-```
+Compose applies migrations and runs the report-reader seed automatically.
+The seed updates the role's password from `REPORT_DB_PASSWORD` and grants
+`SELECT` on `public.reservation`. Set `REPORT_DB_USER` and
+`REPORT_DB_PASSWORD` consistently for the migrate service and report worker;
+rerun `docker compose up -d` after changing them. The database provisioning
+account needs permission to create or alter the reader role and grant access.
 
 Optional data jobs:
 

@@ -1,0 +1,5 @@
+framework:
+    messenger:
+        transports:
+            reports_requests: 'in-memory://'
+            reports_results: 'in-memory://'

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DELETE, POST } from '../../../../app/api/admin/[...path]/route';
+import { DELETE, GET, POST } from '../../../../app/api/admin/[...path]/route';
 
 const { getAccessToken, revalidatePath } = vi.hoisted(() => ({ getAccessToken: vi.fn(), revalidatePath: vi.fn() }));
 vi.mock('../../../../lib/server-api', () => ({ getAccessToken }));
@@ -71,6 +71,37 @@ describe('admin proxy route', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('down')));
 
     expect((await POST(post({}), ctx('hotels'))).status).toBe(503);
+  });
+
+  it('allows report reads and preserves PDF download headers and bytes', async () => {
+    const pdf = new Uint8Array([37, 80, 68, 70, 45]);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(pdf, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="report.pdf"',
+      },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await GET(
+      new Request('http://localhost/api/admin/admin/reports/report-id/download'),
+      ctx('admin', 'reports', 'b6f1c0e2-0000-4000-8000-000000000001', 'download'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/pdf');
+    expect(response.headers.get('content-disposition')).toContain('report.pdf');
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual(Array.from(pdf));
+    expect(fetchMock.mock.calls[0][1].headers.Accept).toBe('application/pdf');
+  });
+
+  it('does not open existing admin resources for GET', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect((await GET(new Request('http://localhost/api/admin/hotels'), ctx('hotels'))).status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('rejects cross-origin mutations with 403 without calling the API', async () => {

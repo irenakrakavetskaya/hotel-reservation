@@ -43,6 +43,18 @@ describe('apiFetch', () => {
     expect(conflict).toMatchObject({ status: 409, isConflict: true });
   });
 
+  it('uses the detail field from JSON problem responses', async () => {
+    mockFetch(new Response(JSON.stringify({ detail: 'The report period cannot exceed one year.' }), {
+      status: 422,
+      headers: { 'Content-Type': 'application/problem+json' },
+    }));
+
+    await expect(apiFetch('/x')).rejects.toMatchObject({
+      status: 422,
+      message: 'The report period cannot exceed one year.',
+    });
+  });
+
   it('handles non-JSON error bodies', async () => {
     mockFetch(new Response('<html>', { status: 500, statusText: 'Server Error', headers: { 'Content-Type': 'text/html' } }));
     await expect(apiFetch('/x')).rejects.toMatchObject({ status: 500, message: 'Server Error' });

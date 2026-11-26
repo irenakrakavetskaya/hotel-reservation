@@ -12,12 +12,6 @@ framework:
             policy: sliding_window
             limit: 10
             interval: '15 minutes'
-    messenger:
-        transports:
-            scheduler_default: 'sync://'
-        routing:
-            'Symfony\Component\Console\Messenger\RunCommandMessage': scheduler_default
-
 # Required for WebTestCase/KernelTestCase (self::getContainer(), static::createClient())
 # used by every functional test under tests/Functional — without this, the
 # "test.service_container" service doesn't exist.

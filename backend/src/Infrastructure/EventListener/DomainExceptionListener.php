@@ -15,6 +15,8 @@ use App\Domain\Reservation\Exception\ReservationCancellationConflictException;
 use App\Domain\Reservation\Exception\InsufficientInventoryException;
 use App\Domain\Reservation\Exception\InventoryCapacityConflictException;
 use App\Domain\Reservation\Exception\ReservationNotFoundException;
+use App\Domain\Report\Exception\ReportNotFoundException;
+use App\Domain\Report\Exception\ReportNotReadyException;
 use App\Domain\User\Exception\RoleChangeNotAllowedException;
 use App\Domain\User\Exception\UserAlreadyExistsException;
 use App\Domain\User\Exception\UserNotFoundException;
@@ -43,6 +45,8 @@ final class DomainExceptionListener
             $exception instanceof InventoryCapacityConflictException => Response::HTTP_CONFLICT,
             $exception instanceof ReservationCancellationConflictException => Response::HTTP_CONFLICT,
             $exception instanceof ReservationNotFoundException => Response::HTTP_NOT_FOUND,
+            $exception instanceof ReportNotFoundException => Response::HTTP_NOT_FOUND,
+            $exception instanceof ReportNotReadyException => Response::HTTP_CONFLICT,
             $exception instanceof ReservationPaymentStateException => Response::HTTP_CONFLICT,
             $exception instanceof HotelNotFoundException => Response::HTTP_NOT_FOUND,
             $exception instanceof RoomNotFoundException => Response::HTTP_NOT_FOUND,

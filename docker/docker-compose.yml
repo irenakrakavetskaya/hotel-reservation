@@ -22,14 +22,19 @@ services:
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
       REDIS_URL: redis://redis:6379
+      MESSENGER_REPORT_TRANSPORT_DSN: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/%2f
+      REPORTS_DIR: /app/var/reports
     volumes:
       - ../backend:/app
       - backend_vendor:/app/vendor
+      - reports_data:/app/var/reports:ro
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
   frontend:
     image: docker_frontend
     build:
@@ -42,6 +47,37 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:${HTTP_PORT:-8090}/v1
       API_SERVER_URL: http://nginx/v1
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    image: docker_backend
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+    command:
+      - sh
+      - -ec
+      - |
+        php bin/console doctrine:migrations:migrate --no-interaction
+        psql --set=ON_ERROR_STOP=1 --host=postgres --username="$$POSTGRES_USER" --dbname="$$POSTGRES_DB" --file=/opt/seeds/report-reader.sql
+    environment:
+      APP_ENV: dev
+      APP_SECRET: ${APP_SECRET:-changeme}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
+      POSTGRES_USER: ${POSTGRES_USER:-hotel}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-hotel}
+      POSTGRES_DB: ${POSTGRES_DB:-hotel_reservations}
+      REPORT_DB_USER: ${REPORT_DB_USER:-report_reader}
+      REPORT_DB_PASSWORD: ${REPORT_DB_PASSWORD:-report-reader-dev}
+    volumes:
+      - ../backend:/app
+      - backend_vendor:/app/vendor
+      - ./postgres/seeds/report-reader.sql:/opt/seeds/report-reader.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   scheduler:
     image: docker_scheduler
@@ -49,17 +85,83 @@ services:
       context: ../backend
       dockerfile: ../docker/Dockerfile.backend
     command: php bin/console messenger:consume scheduler_default --time-limit=3600 --memory-limit=128M
+    restart: unless-stopped
     environment:
       APP_ENV: dev
       APP_SECRET: ${APP_SECRET:-changeme}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
       REDIS_URL: redis://redis:6379
+      MESSENGER_REPORT_TRANSPORT_DSN: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/%2f
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  reports-results:
+    image: docker_backend
+    command: php bin/console messenger:consume reports_results --time-limit=3600 --memory-limit=128M
+    restart: unless-stopped
+    environment:
+      APP_ENV: dev
+      APP_SECRET: ${APP_SECRET:-changeme}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
+      MESSENGER_REPORT_TRANSPORT_DSN: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/%2f
+    volumes:
+      - ../backend:/app
+      - backend_vendor:/app/vendor
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+
+  report-worker:
+    image: docker_report_worker
+    build:
+      context: ../report-worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      AMQP_URL: amqp://${RABBITMQ_USER:-hotel_app}:${RABBITMQ_PASSWORD:-hotel-dev}@rabbitmq:5672/
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-hotel_reservations}
+      DB_USER: ${REPORT_DB_USER:-report_reader}
+      DB_PASSWORD: ${REPORT_DB_PASSWORD:-report-reader-dev}
+      HEALTH_ADDR: :8081
+      REPORTS_DIR: /data/reports
+    volumes:
+      - reports_data:/data/reports
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-hotel_app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-hotel-dev}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:18-alpine
@@ -72,7 +174,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hotel}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-hotel} -d ${POSTGRES_DB:-hotel_reservations}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -88,3 +190,5 @@ volumes:
   postgres_data:
   redis_data:
   backend_vendor:
+  reports_data:
+  rabbitmq_data:

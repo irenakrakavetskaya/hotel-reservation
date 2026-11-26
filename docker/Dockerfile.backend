@@ -17,6 +17,7 @@ COPY composer.* ./
 RUN composer install \       
         --no-scripts \
         --no-autoloader \
+        --ignore-platform-req=ext-amqp \
         --no-interaction \
         --prefer-dist
 
@@ -27,6 +28,9 @@ RUN apk add --no-cache \
         icu-dev \
         libzip-dev \
         postgresql-dev \
+        postgresql-client \
+        rabbitmq-c \
+        rabbitmq-c-dev \
         $PHPIZE_DEPS \
     && docker-php-ext-configure intl \
     && docker-php-ext-install -j"$(nproc)" \
@@ -34,9 +38,9 @@ RUN apk add --no-cache \
         pdo_pgsql \
         zip \
         opcache \
-    && pecl install redis pcov \
-    && docker-php-ext-enable redis pcov \
-    && apk del $PHPIZE_DEPS
+    && pecl install redis pcov amqp \
+    && docker-php-ext-enable redis pcov amqp \
+    && apk del $PHPIZE_DEPS rabbitmq-c-dev
 
 COPY --from=composer_deps /usr/bin/composer /usr/bin/composer
 

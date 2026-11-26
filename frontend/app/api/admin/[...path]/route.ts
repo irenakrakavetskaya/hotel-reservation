@@ -8,12 +8,17 @@ import { getAccessToken } from '../../../../lib/server-api';
 // Only the admin-managed resources are reachable; the backend still authorizes every call.
 const ALLOWED_PATH = /^(hotels(\/\d+(\/(room-types|rooms)(\/\d+)?)?)?|admin\/users(\/\d+\/roles)?)$/;
 const METHODS = new Set(['POST', 'PUT', 'DELETE']);
+const REPORT_COLLECTION_PATH = /^admin\/reports$/;
+const REPORT_READ_PATH = /^admin\/reports(?:\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:\/download)?)?$/i;
 
 type Context = { params: Promise<{ path: string[] }> };
 
 async function forward(request: Request, { params }: Context): Promise<Response> {
   const path = (await params).path.join('/');
-  if (!ALLOWED_PATH.test(path) || !METHODS.has(request.method)) {
+  const isReportPath = REPORT_READ_PATH.test(path);
+  const isAllowedReportMethod = (REPORT_COLLECTION_PATH.test(path) && request.method === 'POST')
+    || (isReportPath && request.method === 'GET');
+  if (!isAllowedReportMethod && (!ALLOWED_PATH.test(path) || !METHODS.has(request.method))) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
@@ -26,13 +31,13 @@ async function forward(request: Request, { params }: Context): Promise<Response>
     return NextResponse.json({ error: 'Sign in to continue.' }, { status: 401 });
   }
 
-  const hasBody = request.method !== 'DELETE';
+  const hasBody = request.method === 'POST' || request.method === 'PUT';
   let upstream: Response;
   try {
     upstream = await fetch(`${apiBaseUrl()}/${path}`, {
       method: request.method,
       headers: {
-        Accept: 'application/json',
+        Accept: path.endsWith('/download') ? 'application/pdf' : 'application/json',
         Authorization: `Bearer ${token}`,
         ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       },
@@ -47,13 +52,19 @@ async function forward(request: Request, { params }: Context): Promise<Response>
     revalidatePath('/hotels', 'layout');
   }
 
-  const text = await upstream.text();
-  return new Response(text === '' ? null : text, {
+  const responseHeaders = new Headers();
+  for (const header of ['content-type', 'content-disposition', 'cache-control']) {
+    const value = upstream.headers.get(header);
+    if (value) responseHeaders.set(header, value);
+  }
+  const body = await upstream.arrayBuffer();
+  return new Response(body.byteLength === 0 ? null : body, {
     status: upstream.status,
-    headers: { 'Content-Type': upstream.headers.get('content-type') ?? 'application/json' },
+    headers: responseHeaders,
   });
 }
 
 export const POST = forward;
 export const PUT = forward;
 export const DELETE = forward;
+export const GET = forward;

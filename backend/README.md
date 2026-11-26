@@ -2,13 +2,17 @@
 
 ## Local setup
 
-1. Run `composer install` from this directory.
+1. Start the Docker stack from the repository root:
+   `docker compose -f docker/docker-compose.yml up -d --build`.
+   Compose applies migrations and provisions the report reader before the app
+   and workers start. Subsequent `up` runs apply only pending migrations.
 2. Generate JWT keys without committing them:
    `php bin/console lexik:jwt:generate-keypair`.
-3. Start PostgreSQL and Redis with `docker compose -f ../docker/docker-compose.yml up -d postgres redis`.
-4. Run `php bin/console doctrine:migrations:migrate`.
-5. Run `php bin/console app:inventory:prepopulate --backfill`, then
-   `php bin/console app:rates:recompute`.
+   From the repository root, this can also be run in the container:
+   `docker compose -f docker/docker-compose.yml exec backend php bin/console lexik:jwt:generate-keypair`.
+3. Optionally run `php bin/console app:inventory:prepopulate --backfill`, then
+   `php bin/console app:rates:recompute`. Run `composer install` first if using
+   the host PHP runtime.
 
 For deterministic local data, run `php bin/console app:demo:seed`. This creates
 demo customer and staff users, hotels, room types, rooms, inventory, rates, and
@@ -39,6 +43,27 @@ with `php bin/console app:user:promote <email> --role=ROLE_ADMIN`.
 
 The frontend `/admin` area (staff/admin only, guarded server-side from the JWT)
 offers CRUD for hotels, room types and rooms, plus user roles for admins.
+
+Staff and admins can generate reservation summary PDFs from `/admin/reports`.
+The report period filters reservation creation dates in UTC, inclusive of both
+selected dates; counts reflect current reservation statuses, and the USD total
+includes only reservations currently marked `paid`. These are not historical
+payment or revenue figures.
+
+The asynchronous report pipeline uses RabbitMQ and the Go worker in
+`report-worker/`. Configure `RABBITMQ_USER`, `RABBITMQ_PASSWORD`,
+`REPORT_DB_USER`, and `REPORT_DB_PASSWORD` for deployment; Compose provides
+development defaults. The database seed at
+`docker/postgres/seeds/report-reader.sql` creates/updates the reader role and
+grants it read-only access to `reservation`. The `migrate` service runs it after
+migrations on each Compose startup. Changing reader credentials requires
+another `docker compose up -d` with matching settings for the worker.
+The database provisioning account needs permission to create or alter the role
+and grant access. Symfony and the worker share the `reports_data` volume,
+mounted read-only in the API container. The worker writes PDFs with group-read
+permissions using the PHP-FPM `www-data` group ID (82); other deployments must
+give the API process equivalent read access. RabbitMQ's AMQP port is bound to
+localhost only by default.
 
 Mock payment settlement is available at `POST /v1/payments` with body fields
 `reservationID` (UUID) and `approved` (boolean). It updates reservation status

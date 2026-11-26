@@ -59,6 +59,24 @@ Pre-populated 2 years out by a scheduled job (Symfony Messenger + cron, or a `sy
 
 `status` enum: `pending, paid, refunded, canceled, rejected`.
 
+### `reservation_report`
+`id (UUID), requested_by (FK app_user), period_from, period_to, status
+(pending/processing/done/failed), artifact_key, error_message, created_at,
+updated_at, started_at, finished_at`. Reports are filtered by reservation
+`created_at` in UTC calendar days, with a maximum one-year range. The initial
+report includes reservation counts by current status and the sum of
+`total_price` for currently `paid` reservations only. `total_price` is in cents
+and report amounts use the existing USD display convention. There is no
+historical payment/status ledger or historical inventory snapshot, so this
+report does not claim net revenue, past occupancy, no-show/check-out, booking
+source, or guest metrics.
+
+`report_outbox` stores the versioned JSON generation request in the same
+transaction as its report row. A publisher forwards pending rows to RabbitMQ;
+the Go worker publishes progress and terminal result messages for Symfony to
+consume. Symfony remains the only writer of report state. Duplicate delivery
+is expected and handled idempotently.
+
 ## 2. API surface
 
 Matches the spec given, implemented as Symfony controllers under `/v1`:
@@ -88,6 +106,14 @@ Matches the spec given, implemented as Symfony controllers under `/v1`:
   `approved=true` transitions `pending -> paid`, `approved=false` transitions
   `pending -> rejected`, which also releases the held inventory in the same
   transaction (a later cancel of a rejected reservation does not release again).
+- `POST /v1/admin/reports` — staff/admin only; request a PDF summary using
+  `{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }`. Dates are inclusive UTC
+  calendar days; `to` cannot be in the future and the range is limited to one
+  year.
+- `GET /v1/admin/reports` and `GET /v1/admin/reports/{id}` — staff/admin only;
+  list recent report jobs and poll their current status.
+- `GET /v1/admin/reports/{id}/download` — staff/admin only; stream the PDF only
+  after the report is complete.
 
 Auth: Symfony Security with role-based voters (`ROLE_USER`, `ROLE_STAFF`, `ROLE_ADMIN`). JWT (LexikJWTAuthenticationBundle) for the API, since Next.js is a separate origin.
 

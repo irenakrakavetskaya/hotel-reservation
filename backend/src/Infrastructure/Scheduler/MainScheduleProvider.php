@@ -39,6 +39,9 @@ final class MainScheduleProvider implements ScheduleProviderInterface
                 RecurringMessage::cron('0 2 * * *', new RunCommandMessage('app:inventory:prepopulate')),
                 RecurringMessage::cron('0 3 * * *', new RunCommandMessage('app:rates:recompute')),
             )
+            ->add(
+                RecurringMessage::every('10 seconds', new RunCommandMessage('app:reports:publish-outbox')),
+            )
             ->stateful($this->cache);
     }
 }

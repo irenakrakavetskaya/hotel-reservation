@@ -49,6 +49,10 @@ final class RouteAuthorizationMatrixTest extends WebTestCase
         yield 'delete room' => ['DELETE', '/v1/hotels/1/rooms/1'];
         yield 'list users' => ['GET', '/v1/admin/users'];
         yield 'change user roles' => ['PUT', '/v1/admin/users/1/roles'];
+        yield 'list reports' => ['GET', '/v1/admin/reports'];
+        yield 'get report' => ['GET', '/v1/admin/reports/' . self::UUID];
+        yield 'create report' => ['POST', '/v1/admin/reports'];
+        yield 'download report' => ['GET', '/v1/admin/reports/' . self::UUID . '/download'];
     }
 
     /**

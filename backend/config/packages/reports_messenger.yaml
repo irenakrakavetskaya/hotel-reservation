@@ -1,0 +1,28 @@
+framework:
+    messenger:
+        transports:
+            reports_requests:
+                dsn: '%env(MESSENGER_REPORT_TRANSPORT_DSN)%'
+                serializer: App\Infrastructure\Messenger\ReportMessageSerializer
+                options:
+                    exchange:
+                        name: hotel_reports
+                        type: direct
+                    queues:
+                        reports.generate:
+                            binding_keys: [reports.generate]
+                            arguments:
+                                x-dead-letter-exchange: hotel_reports_dead
+                                x-dead-letter-routing-key: reports.failed
+            reports_results:
+                dsn: '%env(MESSENGER_REPORT_TRANSPORT_DSN)%'
+                serializer: App\Infrastructure\Messenger\ReportMessageSerializer
+                options:
+                    exchange:
+                        name: hotel_reports
+                        type: direct
+                    queues:
+                        reports.results:
+                            binding_keys: [reports.result]
+        routing:
+            App\Domain\Report\Message\GenerateReportMessage: reports_requests

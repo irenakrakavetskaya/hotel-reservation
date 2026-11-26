@@ -76,6 +76,16 @@ export type Reservation = {
   updatedAt: string;
 };
 
+export type ReservationReport = {
+  id: string;
+  from: string;
+  to: string;
+  status: 'pending' | 'processing' | 'done' | 'failed';
+  error: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
 export type AuthUser = {
   id: number;
   email: string;
@@ -118,13 +128,16 @@ export function apiBaseUrl(): string {
 
 async function responseMessage(response: Response): Promise<{ message: string; details: unknown }> {
   const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
+  if (!contentType.toLowerCase().includes('json')) {
     return { message: response.statusText || 'The API request failed.', details: null };
   }
 
   const payload: unknown = await response.json();
   if (typeof payload === 'object' && payload !== null && 'message' in payload && typeof payload.message === 'string') {
     return { message: payload.message, details: payload };
+  }
+  if (typeof payload === 'object' && payload !== null && 'detail' in payload && typeof payload.detail === 'string') {
+    return { message: payload.detail, details: payload };
   }
 
   return { message: response.statusText || 'The API request failed.', details: payload };
@@ -211,6 +224,24 @@ export const customerApi = {
     return apiFetch<Reservation>(`/reservations/${reservationId}`, {
       baseUrl: CUSTOMER_PROXY,
       method: 'DELETE',
+    });
+  },
+};
+
+const ADMIN_PROXY = '/api/admin';
+
+export const adminReportApi = {
+  list() {
+    return apiFetch<ReservationReport[]>('/admin/reports', {
+      baseUrl: ADMIN_PROXY,
+      cache: 'no-store',
+    });
+  },
+  create(from: string, to: string) {
+    return apiFetch<ReservationReport>('/admin/reports', {
+      baseUrl: ADMIN_PROXY,
+      method: 'POST',
+      body: JSON.stringify({ from, to }),
     });
   },
 };
