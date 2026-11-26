@@ -93,6 +93,29 @@ AUTH_COOKIE_SECURE=false docker compose -f docker/docker-compose.yml up
 
 Set `AUTH_COOKIE_SECURE=true` when serving the frontend over HTTPS.
 
+## Logs
+
+Compose automatically copies service output to `logs/compose-<project>.log`
+(`logs/compose-docker.log` by default). The file is Git-ignored and readable
+by the owner of the `logs/` directory. It includes backend, frontend, report
+worker, scheduler, broker, database, proxy and other Compose service output;
+browser console messages and Docker daemon logs are not included.
+
+Logs rotate at 10 MiB by default, keeping three numbered backups. Set
+`LOG_MAX_BYTES` to a positive byte limit to change the rotation threshold.
+A single oversized line can exceed the limit. On collector restart, Docker's
+retained service logs are replayed, so some lines can appear more than once.
+Logs may contain sensitive data; restrict access and do not commit or share them.
+
+The collector mounts the Docker socket. This grants it broad control over Docker
+and potentially the host, even though the socket mount is read-only. Use this
+development setup only on a trusted host. Existing `docker compose logs` output
+remains available; inspect collector failures with:
+
+```bash
+docker compose -f docker/docker-compose.yml logs log-collector
+```
+
 ## Database Setup
 
 Compose applies migrations and runs the report-reader seed automatically.
