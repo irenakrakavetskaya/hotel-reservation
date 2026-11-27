@@ -9,6 +9,8 @@ use App\Domain\User\Dto\UserResponse;
 use App\Domain\User\Entity\User;
 use App\Domain\User\Security\UserManagementVoter;
 use App\Domain\User\Service\UserRoleService;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,6 +21,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/v1/admin/users')]
 #[IsGranted(UserManagementVoter::MANAGE)]
+#[OA\Tag(name: 'Users')]
+#[OA\Response(response: 401, description: 'Authentication required')]
+#[OA\Response(response: 403, description: 'Admin access required')]
 final class UserAdminController extends AbstractController
 {
     private const MAX_PAGE_SIZE = 100;
@@ -26,6 +31,11 @@ final class UserAdminController extends AbstractController
     public function __construct(private readonly UserRoleService $roles) {}
 
     #[Route('', name: 'admin_user_list', methods: ['GET'])]
+    #[OA\Get(security: [['Bearer' => []]])]
+    #[OA\Parameter(name: 'search', in: 'query', schema: new OA\Schema(type: 'string'))]
+    #[OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer', default: 50))]
+    #[OA\Parameter(name: 'offset', in: 'query', schema: new OA\Schema(type: 'integer', default: 0))]
+    #[OA\Response(response: 200, description: 'Users; admin only', content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: new Model(type: UserResponse::class))))]
     public function list(Request $request): JsonResponse
     {
         $search = $request->query->get('search');
@@ -38,6 +48,11 @@ final class UserAdminController extends AbstractController
     }
 
     #[Route('/{id<\d+>}/roles', name: 'admin_user_roles', methods: ['PUT'])]
+    #[OA\Put(security: [['Bearer' => []]])]
+    #[OA\Response(response: 200, description: 'Updated user; admin only', content: new Model(type: UserResponse::class))]
+    #[OA\Response(response: 404, description: 'User not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Role change disallowed', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function updateRoles(int $id, #[MapRequestPayload] UpdateUserRolesRequest $payload, #[CurrentUser] User $actor): JsonResponse
     {
         return $this->json(UserResponse::fromEntity($this->roles->updateRoles($id, $payload->roles, $actor)));

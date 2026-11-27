@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\User\Dto;
 
+use Nelmio\ApiDocBundle\Attribute\Ignore;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /** Request body for POST /v1/auth/register. */
@@ -23,6 +24,7 @@ final class RegisterRequest
     public string $passwordConfirmation;
 
     #[Assert\IsTrue(message: 'Passwords must match.')]
+    #[Ignore]
     public function isPasswordsMatch(): bool
     {
         return $this->password === $this->passwordConfirmation;

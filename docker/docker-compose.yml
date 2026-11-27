@@ -72,15 +72,20 @@ services:
     build:
       context: ../backend
       dockerfile: ../docker/Dockerfile.backend
+    user: root
     command:
       - sh
       - -ec
       - |
+        composer install --no-interaction --prefer-dist --no-scripts
+        php bin/console cache:clear
         php bin/console doctrine:migrations:migrate --no-interaction
         psql --set=ON_ERROR_STOP=1 --host=postgres --username="$$POSTGRES_USER" --dbname="$$POSTGRES_DB" --file=/opt/seeds/report-reader.sql
+        chown -R www-data:www-data /app/var/cache /app/var/log
     environment:
       APP_ENV: dev
       APP_SECRET: ${APP_SECRET:-changeme}
+      COMPOSER_ALLOW_SUPERUSER: "1"
       DATABASE_URL: postgresql://${POSTGRES_USER:-hotel}:${POSTGRES_PASSWORD:-hotel}@postgres:5432/${POSTGRES_DB:-hotel_reservations}?serverVersion=18&charset=utf8
       POSTGRES_USER: ${POSTGRES_USER:-hotel}
       PGPASSWORD: ${POSTGRES_PASSWORD:-hotel}

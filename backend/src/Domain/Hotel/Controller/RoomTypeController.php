@@ -9,6 +9,8 @@ use App\Domain\Hotel\Dto\RoomTypeResponse;
 use App\Domain\Hotel\Service\RoomTypeService;
 use App\Infrastructure\Cache\CacheScopes;
 use App\Infrastructure\Cache\ReadCacheVersionService;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,6 +26,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * by RoomController.
  */
 #[Route('/v1/hotels/{hotelId<\d+>}/room-types')]
+#[OA\Tag(name: 'Room types')]
 final class RoomTypeController extends AbstractController
 {
     private const CACHE_TTL_SECONDS = 300;
@@ -35,6 +38,9 @@ final class RoomTypeController extends AbstractController
     ) {}
 
     #[Route('', name: 'room_type_list', methods: ['GET'])]
+    #[OA\Get(security: [])]
+    #[OA\Response(response: 200, description: 'Room types', content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: new Model(type: RoomTypeResponse::class))))]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function list(int $hotelId): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::roomTypeRead($hotelId));
@@ -56,6 +62,9 @@ final class RoomTypeController extends AbstractController
     }
 
     #[Route('/{id<\d+>}', name: 'room_type_get', methods: ['GET'])]
+    #[OA\Get(security: [])]
+    #[OA\Response(response: 200, description: 'Room type', content: new Model(type: RoomTypeResponse::class))]
+    #[OA\Response(response: 404, description: 'Room type not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function get(int $hotelId, int $id): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::roomTypeRead($hotelId));
@@ -77,6 +86,12 @@ final class RoomTypeController extends AbstractController
 
     #[Route('', name: 'room_type_create', methods: ['POST'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Post(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 201, description: 'Room type created', headers: [new OA\Header(header: 'Location', schema: new OA\Schema(type: 'string'))], content: new Model(type: RoomTypeResponse::class))]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function create(int $hotelId, #[MapRequestPayload] RoomTypeRequest $request): JsonResponse
     {
         $roomType = $this->roomTypeService->createRoomType($hotelId, $request);
@@ -90,6 +105,12 @@ final class RoomTypeController extends AbstractController
 
     #[Route('/{id<\d+>}', name: 'room_type_update', methods: ['PUT'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Put(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 200, description: 'Updated room type', content: new Model(type: RoomTypeResponse::class))]
+    #[OA\Response(response: 404, description: 'Room type not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function update(int $hotelId, int $id, #[MapRequestPayload] RoomTypeRequest $request): JsonResponse
     {
         return $this->json(RoomTypeResponse::fromEntity($this->roomTypeService->updateRoomType($hotelId, $id, $request)));
@@ -97,6 +118,12 @@ final class RoomTypeController extends AbstractController
 
     #[Route('/{id<\d+>}', name: 'room_type_delete', methods: ['DELETE'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Delete(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 204, description: 'Room type deleted')]
+    #[OA\Response(response: 404, description: 'Room type not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Room type has reservations', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function delete(int $hotelId, int $id): JsonResponse
     {
         $this->roomTypeService->deleteRoomType($hotelId, $id);

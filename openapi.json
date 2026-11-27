@@ -1,0 +1,2529 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Hotel Reservation API",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/"
+        }
+    ],
+    "paths": {
+        "/v1/hotels": {
+            "get": {
+                "tags": [
+                    "Hotels"
+                ],
+                "summary": "GET /v1/hotels \u2014 list hotels, optionally filtered by ?city=.",
+                "operationId": "get_hotel_list",
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hotels",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/HotelResponse"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            },
+            "post": {
+                "tags": [
+                    "Hotels"
+                ],
+                "summary": "POST /v1/hotels \u2014 staff-only.",
+                "operationId": "post_hotel_create",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HotelRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "201": {
+                        "description": "Hotel created",
+                        "headers": {
+                            "Location": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HotelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/hotels/{id}": {
+            "get": {
+                "tags": [
+                    "Hotels"
+                ],
+                "summary": "GET /v1/hotels/{id} \u2014 the hotel detail page's data.",
+                "operationId": "get_hotel_get",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hotel",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HotelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            },
+            "put": {
+                "tags": [
+                    "Hotels"
+                ],
+                "summary": "PUT /v1/hotels/{id} \u2014 staff-only. Full-replace semantics \u2014 see\nHotelRequest.",
+                "operationId": "put_hotel_update",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HotelRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "200": {
+                        "description": "Updated hotel",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HotelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Hotels"
+                ],
+                "summary": "DELETE /v1/hotels/{id} \u2014 staff-only.",
+                "operationId": "delete_hotel_delete",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "204": {
+                        "description": "Hotel deleted"
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Hotel has reservations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/hotels/{hotelId}/rooms": {
+            "get": {
+                "tags": [
+                    "Rooms"
+                ],
+                "summary": "GET /v1/hotels/{hotelId}/rooms",
+                "operationId": "get_room_list",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rooms",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RoomResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            },
+            "post": {
+                "tags": [
+                    "Rooms"
+                ],
+                "summary": "POST /v1/hotels/{hotelId}/rooms \u2014 staff-only.",
+                "operationId": "post_room_create",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "201": {
+                        "description": "Room created",
+                        "headers": {
+                            "Location": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoomResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate room number or inventory conflict",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request or room type; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvalidRequest"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/hotels/{hotelId}/rooms/{id}": {
+            "get": {
+                "tags": [
+                    "Rooms"
+                ],
+                "summary": "GET /v1/hotels/{hotelId}/rooms/{id}",
+                "operationId": "get_room_get",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Room",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoomResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Room not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            },
+            "put": {
+                "tags": [
+                    "Rooms"
+                ],
+                "summary": "PUT /v1/hotels/{hotelId}/rooms/{id} \u2014 staff-only. Full-replace\nsemantics \u2014 see RoomRequest.",
+                "operationId": "put_room_update",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "200": {
+                        "description": "Updated room",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoomResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Room not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Duplicate room number or inventory conflict",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request or room type; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvalidRequest"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Rooms"
+                ],
+                "summary": "DELETE /v1/hotels/{hotelId}/rooms/{id} \u2014 staff-only.",
+                "operationId": "delete_room_delete",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "204": {
+                        "description": "Room deleted"
+                    },
+                    "404": {
+                        "description": "Room not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Inventory conflict",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/hotels/{hotelId}/room-types": {
+            "get": {
+                "tags": [
+                    "Room types"
+                ],
+                "operationId": "get_room_type_list",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Room types",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RoomTypeResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            },
+            "post": {
+                "tags": [
+                    "Room types"
+                ],
+                "operationId": "post_room_type_create",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomTypeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "201": {
+                        "description": "Room type created",
+                        "headers": {
+                            "Location": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoomTypeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/hotels/{hotelId}/room-types/{id}": {
+            "get": {
+                "tags": [
+                    "Room types"
+                ],
+                "operationId": "get_room_type_get",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Room type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoomTypeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Room type not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            },
+            "put": {
+                "tags": [
+                    "Room types"
+                ],
+                "operationId": "put_room_type_update",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomTypeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "200": {
+                        "description": "Updated room type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RoomTypeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Room type not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Room types"
+                ],
+                "operationId": "delete_room_type_delete",
+                "parameters": [
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    },
+                    "204": {
+                        "description": "Room type deleted"
+                    },
+                    "404": {
+                        "description": "Room type not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Room type has reservations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/payments": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "POST /v1/payments",
+                "operationId": "post_payment_process",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProcessPaymentRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Settled reservation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReservationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Reservation not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Invalid payment state",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/admin/reports": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "operationId": "get_report_list",
+                "responses": {
+                    "200": {
+                        "description": "Recent reports",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReportResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Reports"
+                ],
+                "description": "Inclusive UTC calendar dates, at most one year; to cannot be in the future.",
+                "operationId": "post_report_create",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "from",
+                                    "to"
+                                ],
+                                "properties": {
+                                    "from": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "to": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Report queued",
+                        "headers": {
+                            "Location": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReportResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/admin/reports/{id}": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "operationId": "get_report_get",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "[0-9a-fA-F-]{36}"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Report",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReportResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Report not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid report ID; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/admin/reports/{id}/download": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "operationId": "get_report_download",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "[0-9a-fA-F-]{36}"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF report",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Report not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Report not ready",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid report ID; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/admin/realtime/token": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "operationId": "get_report_realtime_token",
+                "responses": {
+                    "200": {
+                        "description": "Short-lived realtime token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "token"
+                                    ],
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Staff access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/hotels/{hotelId}/room-types/{roomTypeId}/availability": {
+            "get": {
+                "tags": [
+                    "Availability"
+                ],
+                "operationId": "get_room_type_availability",
+                "parameters": [
+                    {
+                        "name": "startDate",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "endDate",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "roomCount",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "hotelId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    },
+                    {
+                        "name": "roomTypeId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Availability and per-date rates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Availability"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Hotel or room type not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid date range or room count; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/reservations": {
+            "get": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "GET /v1/reservations \u2014 the logged-in user's reservation history.",
+                "operationId": "get_reservation_list",
+                "responses": {
+                    "200": {
+                        "description": "Current user reservations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReservationResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "POST /v1/reservations \u2014 make a new reservation.",
+                "description": "reservationID is a client-supplied UUID and idempotency key. Reuse it for retries.",
+                "operationId": "post_reservation_create",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reservationID",
+                                    "hotelID",
+                                    "roomTypeID",
+                                    "startDate",
+                                    "endDate",
+                                    "roomCount"
+                                ],
+                                "properties": {
+                                    "reservationID": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "hotelID": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "roomTypeID": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "startDate": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "endDate": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "roomCount": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Reservation created or existing idempotent result",
+                        "headers": {
+                            "Location": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReservationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Insufficient inventory or conflicting reservation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/reservations/{id}": {
+            "get": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "GET /v1/reservations/{id} \u2014 a single reservation's detail.",
+                "operationId": "get_reservation_get",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reservation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReservationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Reservation not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid reservation ID; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "DELETE /v1/reservations/{id} \u2014 cancel a reservation. Idempotent:\ncanceling an already-canceled reservation is a no-op, not an error.",
+                "operationId": "delete_reservation_cancel",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cancelled reservation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReservationResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Reservation not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Cancellation conflict",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid reservation ID; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "operationId": "post_auth_login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "JWT",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "token"
+                                    ],
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials or login throttled"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "operationId": "post_auth_register",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password",
+                                    "passwordConfirmation"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 180
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "maxLength": 255,
+                                        "minLength": 8
+                                    },
+                                    "passwordConfirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "maxLength": 255,
+                                        "minLength": 8
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registered user and JWT",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "token",
+                                        "user"
+                                    ],
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/UserResponse"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Email already registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Registration rate limit exceeded",
+                        "headers": {
+                            "Retry-After": {
+                                "schema": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/admin/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "operationId": "get_admin_user_list",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users; admin only",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserResponse"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Admin access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        },
+        "/v1/admin/users/{id}/roles": {
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "operationId": "put_admin_user_roles",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "\\d+"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateUserRolesRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated user; admin only",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Role change disallowed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DomainError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request; JSON problem details when requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HttpProblem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Admin access required"
+                    }
+                },
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "DomainError": {
+                "required": [
+                    "error"
+                ],
+                "properties": {
+                    "error": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "HttpProblem": {
+                "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "integer"
+                    },
+                    "detail": {
+                        "type": "string"
+                    },
+                    "violations": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "propertyPath",
+                                "title"
+                            ],
+                            "properties": {
+                                "propertyPath": {
+                                    "type": "string"
+                                },
+                                "title": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "InvalidRequest": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/HttpProblem"
+                    },
+                    {
+                        "$ref": "#/components/schemas/DomainError"
+                    }
+                ]
+            },
+            "Availability": {
+                "required": [
+                    "hotelID",
+                    "roomTypeID",
+                    "startDate",
+                    "endDate",
+                    "roomCount",
+                    "nights",
+                    "canBook",
+                    "totalPrice",
+                    "minAvailableRooms",
+                    "days"
+                ],
+                "properties": {
+                    "hotelID": {
+                        "type": "integer"
+                    },
+                    "roomTypeID": {
+                        "type": "integer"
+                    },
+                    "startDate": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "roomCount": {
+                        "type": "integer"
+                    },
+                    "nights": {
+                        "type": "integer"
+                    },
+                    "canBook": {
+                        "type": "boolean"
+                    },
+                    "totalPrice": {
+                        "description": "Price in minor units",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "minAvailableRooms": {
+                        "type": "integer"
+                    },
+                    "days": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "date",
+                                "totalInventory",
+                                "totalReserved",
+                                "availableRooms",
+                                "price"
+                            ],
+                            "properties": {
+                                "date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "totalInventory": {
+                                    "type": "integer"
+                                },
+                                "totalReserved": {
+                                    "type": "integer"
+                                },
+                                "availableRooms": {
+                                    "type": "integer"
+                                },
+                                "price": {
+                                    "description": "Price in minor units",
+                                    "type": "integer",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "HotelRequest": {
+                "required": [
+                    "name",
+                    "address",
+                    "city",
+                    "country",
+                    "starRating"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "address": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "city": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "country": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "starRating": {
+                        "type": "integer",
+                        "maximum": 5,
+                        "minimum": 1
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "amenities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    }
+                },
+                "type": "object"
+            },
+            "RoomRequest": {
+                "required": [
+                    "roomTypeId",
+                    "roomNumber"
+                ],
+                "properties": {
+                    "roomTypeId": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                    },
+                    "roomNumber": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "floor": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "default": "active",
+                        "enum": [
+                            "active",
+                            "maintenance",
+                            "inactive"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "RoomTypeRequest": {
+                "required": [
+                    "name",
+                    "maxOccupancy",
+                    "basePrice"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "maxOccupancy": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                    },
+                    "basePrice": {
+                        "title": "Integer cents.",
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "amenities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    }
+                },
+                "type": "object"
+            },
+            "ProcessPaymentRequest": {
+                "required": [
+                    "reservationID",
+                    "approved"
+                ],
+                "properties": {
+                    "reservationID": {
+                        "type": "string"
+                    },
+                    "approved": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "CreateReportRequest": {
+                "properties": {
+                    "from": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "to": {
+                        "type": "string",
+                        "default": ""
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterRequest": {
+                "required": [
+                    "email",
+                    "password",
+                    "passwordConfirmation"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "maxLength": 180
+                    },
+                    "password": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 8
+                    },
+                    "passwordConfirmation": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 8
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateUserRolesRequest": {
+                "properties": {
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    }
+                },
+                "type": "object"
+            },
+            "HotelResponse": {
+                "required": [
+                    "id",
+                    "name",
+                    "address",
+                    "city",
+                    "country",
+                    "starRating",
+                    "description",
+                    "amenities",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "type": "string"
+                    },
+                    "city": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string"
+                    },
+                    "starRating": {
+                        "type": "integer"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "amenities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "RoomResponse": {
+                "required": [
+                    "id",
+                    "hotelId",
+                    "roomTypeId",
+                    "roomNumber",
+                    "floor",
+                    "status",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "hotelId": {
+                        "type": "integer"
+                    },
+                    "roomTypeId": {
+                        "type": "integer"
+                    },
+                    "roomNumber": {
+                        "type": "string"
+                    },
+                    "floor": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "RoomTypeResponse": {
+                "required": [
+                    "id",
+                    "hotelId",
+                    "name",
+                    "description",
+                    "maxOccupancy",
+                    "basePrice",
+                    "amenities",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "hotelId": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "maxOccupancy": {
+                        "type": "integer"
+                    },
+                    "basePrice": {
+                        "type": "integer"
+                    },
+                    "amenities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ReservationResponse": {
+                "required": [
+                    "reservationId",
+                    "hotelID",
+                    "roomTypeID",
+                    "startDate",
+                    "endDate",
+                    "roomCount",
+                    "status",
+                    "totalPrice",
+                    "createdAt",
+                    "updatedAt"
+                ],
+                "properties": {
+                    "reservationId": {
+                        "type": "string"
+                    },
+                    "hotelID": {
+                        "type": "integer"
+                    },
+                    "roomTypeID": {
+                        "type": "integer"
+                    },
+                    "startDate": {
+                        "type": "string"
+                    },
+                    "endDate": {
+                        "type": "string"
+                    },
+                    "roomCount": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "totalPrice": {
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ReportResponse": {
+                "required": [
+                    "id",
+                    "from",
+                    "to",
+                    "status",
+                    "error",
+                    "createdAt",
+                    "finishedAt"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "from": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "createdAt": {
+                        "type": "string"
+                    },
+                    "finishedAt": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "UserResponse": {
+                "required": [
+                    "id",
+                    "email",
+                    "roles"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "Bearer": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Hotels"
+        },
+        {
+            "name": "Rooms"
+        },
+        {
+            "name": "Room types"
+        },
+        {
+            "name": "Payments"
+        },
+        {
+            "name": "Reports"
+        },
+        {
+            "name": "Availability"
+        },
+        {
+            "name": "Reservations"
+        },
+        {
+            "name": "Authentication"
+        },
+        {
+            "name": "Users"
+        }
+    ]
+}

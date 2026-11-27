@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Hotel\Dto;
 
 use App\Domain\Hotel\Entity\Room;
+use OpenApi\Attributes as OA;
 
 /** Explicit API output shape — never serialize the Room entity directly. */
+#[OA\Schema(required: ['id', 'hotelId', 'roomTypeId', 'roomNumber', 'floor', 'status', 'createdAt', 'updatedAt'])]
 final class RoomResponse
 {
     private function __construct(

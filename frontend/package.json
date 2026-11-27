@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "gen:api": "openapi-typescript ../openapi.json -o lib/openapi.d.ts",
+    "check:api": "openapi-typescript ../openapi.json -o lib/openapi.d.ts --check",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
@@ -30,6 +32,7 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "^16.0.1",
     "jsdom": "^29.1.1",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.7.0",
     "vitest": "^5.0.5"
   }

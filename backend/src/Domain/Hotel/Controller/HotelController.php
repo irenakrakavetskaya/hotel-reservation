@@ -9,6 +9,8 @@ use App\Domain\Hotel\Dto\HotelResponse;
 use App\Domain\Hotel\Service\HotelService;
 use App\Infrastructure\Cache\CacheScopes;
 use App\Infrastructure\Cache\ReadCacheVersionService;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,6 +28,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * voters, not inline role checks in controllers").
  */
 #[Route('/v1/hotels')]
+#[OA\Tag(name: 'Hotels')]
 final class HotelController extends AbstractController
 {
     private const CACHE_TTL_SECONDS = 300;
@@ -40,6 +43,9 @@ final class HotelController extends AbstractController
      * GET /v1/hotels — list hotels, optionally filtered by ?city=.
      */
     #[Route('', name: 'hotel_list', methods: ['GET'])]
+    #[OA\Get(security: [])]
+    #[OA\Parameter(name: 'city', in: 'query', schema: new OA\Schema(type: 'string'))]
+    #[OA\Response(response: 200, description: 'Hotels', content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: new Model(type: HotelResponse::class))))]
     public function list(Request $request): JsonResponse
     {
         $cityParam = $request->query->get('city');
@@ -70,6 +76,9 @@ final class HotelController extends AbstractController
      * GET /v1/hotels/{id} — the hotel detail page's data.
      */
     #[Route('/{id<\d+>}', name: 'hotel_get', methods: ['GET'])]
+    #[OA\Get(security: [])]
+    #[OA\Response(response: 200, description: 'Hotel', content: new Model(type: HotelResponse::class))]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function get(int $id): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::hotelRead());
@@ -94,6 +103,11 @@ final class HotelController extends AbstractController
      */
     #[Route('', name: 'hotel_create', methods: ['POST'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Post(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 201, description: 'Hotel created', headers: [new OA\Header(header: 'Location', schema: new OA\Schema(type: 'string'))], content: new Model(type: HotelResponse::class))]
+    #[OA\Response(response: 422, description: 'Invalid request; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function create(#[MapRequestPayload] HotelRequest $request): JsonResponse
     {
         $hotel = $this->hotelService->createHotel($request);
@@ -111,6 +125,12 @@ final class HotelController extends AbstractController
      */
     #[Route('/{id<\d+>}', name: 'hotel_update', methods: ['PUT'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Put(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 200, description: 'Updated hotel', content: new Model(type: HotelResponse::class))]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function update(int $id, #[MapRequestPayload] HotelRequest $request): JsonResponse
     {
         $hotel = $this->hotelService->updateHotel($id, $request);
@@ -123,6 +143,12 @@ final class HotelController extends AbstractController
      */
     #[Route('/{id<\d+>}', name: 'hotel_delete', methods: ['DELETE'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Delete(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 204, description: 'Hotel deleted')]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Hotel has reservations', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function delete(int $id): JsonResponse
     {
         $this->hotelService->deleteHotel($id);

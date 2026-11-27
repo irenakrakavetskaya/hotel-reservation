@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/.."
+temporary=$(mktemp ../.openapi.XXXXXX)
+trap 'rm -f "$temporary"' EXIT HUP INT TERM
+APP_ENV=dev APP_DEBUG=1 php bin/console nelmio:apidoc:dump --format=json > "$temporary"
+
+if [ "${1:-}" = "--check" ]; then
+    if ! cmp -s "$temporary" ../openapi.json; then
+        echo 'OpenAPI snapshot is missing or out of date. Run composer openapi:dump.' >&2
+        exit 1
+    fi
+else
+    chmod 644 "$temporary"
+    mv "$temporary" ../openapi.json
+fi

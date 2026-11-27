@@ -18,11 +18,11 @@ final class ReportMessageSerializer implements SerializerInterface
         try {
             $payload = json_decode($encodedEnvelope['body'], true, flags: JSON_THROW_ON_ERROR);
         } catch (\JsonException $exception) {
-            throw new MessageDecodingFailedException('Report message is not valid JSON.', previous: $exception, encodedEnvelope: $encodedEnvelope);
+            throw new MessageDecodingFailedException('Report message is not valid JSON.', previous: $exception);
         }
 
         if (!is_array($payload) || 'report.result.v1' !== ($payload['event'] ?? null)) {
-            throw new MessageDecodingFailedException('Unsupported report message event.', encodedEnvelope: $encodedEnvelope);
+            throw new MessageDecodingFailedException('Unsupported report message event.');
         }
 
         $reportId = $payload['report_id'] ?? null;
@@ -35,7 +35,7 @@ final class ReportMessageSerializer implements SerializerInterface
             || (null !== $artifactKey && !is_string($artifactKey))
             || (null !== $error && !is_string($error))
         ) {
-            throw new MessageDecodingFailedException('Report result message has invalid fields.', encodedEnvelope: $encodedEnvelope);
+            throw new MessageDecodingFailedException('Report result message has invalid fields.');
         }
 
         return new Envelope(new ReportResultMessage($reportId, $status, $artifactKey, $error));

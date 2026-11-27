@@ -119,6 +119,8 @@ Matches the spec given, implemented as Symfony controllers under `/v1`:
   Post-commit invalidations contain only report IDs. Browsers fetch current
   state via HTTP and reconcile periodically and on reconnect; delivery is
   best-effort and does not replace the database as source of truth.
+- `GET /v1/admin/api-doc` and `GET /v1/admin/api-doc/openapi.json` — staff/admin
+  only; interactive OpenAPI documentation and its generated JSON schema.
 
 Auth: Symfony Security with role-based voters (`ROLE_USER`, `ROLE_STAFF`, `ROLE_ADMIN`). JWT (LexikJWTAuthenticationBundle) for the API, since Next.js is a separate origin.
 

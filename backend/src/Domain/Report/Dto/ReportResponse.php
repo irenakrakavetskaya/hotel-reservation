@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Report\Dto;
 
 use App\Domain\Report\Entity\ReservationReport;
+use OpenApi\Attributes as OA;
 
+#[OA\Schema(required: ['id', 'from', 'to', 'status', 'error', 'createdAt', 'finishedAt'])]
 final class ReportResponse
 {
     private function __construct(

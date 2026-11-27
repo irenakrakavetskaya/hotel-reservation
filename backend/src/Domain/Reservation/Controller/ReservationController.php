@@ -10,6 +10,8 @@ use App\Domain\Reservation\Exception\ReservationNotFoundException;
 use App\Domain\Reservation\Security\ReservationVoter;
 use App\Domain\Reservation\Service\ReservationService;
 use App\Domain\User\Security\AppUserInterface;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +33,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * ReservationService and ReservationRepository, not here.
  */
 #[Route('/v1/reservations')]
+#[OA\Tag(name: 'Reservations')]
+#[OA\Response(response: 401, description: 'Authentication required')]
+#[OA\Response(response: 403, description: 'Access denied')]
 final class ReservationController extends AbstractController
 {
     public function __construct(
@@ -43,6 +48,8 @@ final class ReservationController extends AbstractController
      */
     #[Route('', name: 'reservation_list', methods: ['GET'])]
     #[IsGranted('ROLE_USER')]
+    #[OA\Get(security: [['Bearer' => []]])]
+    #[OA\Response(response: 200, description: 'Current user reservations', content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: new Model(type: ReservationResponse::class))))]
     public function list(#[CurrentUser] AppUserInterface $user): JsonResponse
     {
         $reservations = $this->reservationService->listForUser($user->getId());
@@ -55,6 +62,10 @@ final class ReservationController extends AbstractController
      */
     #[Route('/{id}', name: 'reservation_get', methods: ['GET'])]
     #[IsGranted('ROLE_USER')]
+    #[OA\Get(security: [['Bearer' => []]])]
+    #[OA\Response(response: 200, description: 'Reservation', content: new Model(type: ReservationResponse::class))]
+    #[OA\Response(response: 404, description: 'Reservation not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid reservation ID; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function get(string $id): JsonResponse
     {
         $reservationId = $this->parseId($id);
@@ -76,6 +87,18 @@ final class ReservationController extends AbstractController
      */
     #[Route('', name: 'reservation_create', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
+    #[OA\Post(description: 'reservationID is a client-supplied UUID and idempotency key. Reuse it for retries.', security: [['Bearer' => []]])]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(required: ['reservationID', 'hotelID', 'roomTypeID', 'startDate', 'endDate', 'roomCount'], properties: [
+        new OA\Property(property: 'reservationID', type: 'string', format: 'uuid'),
+        new OA\Property(property: 'hotelID', type: 'integer', minimum: 1),
+        new OA\Property(property: 'roomTypeID', type: 'integer', minimum: 1),
+        new OA\Property(property: 'startDate', type: 'string', format: 'date'),
+        new OA\Property(property: 'endDate', type: 'string', format: 'date'),
+        new OA\Property(property: 'roomCount', type: 'integer', minimum: 1),
+    ]))]
+    #[OA\Response(response: 201, description: 'Reservation created or existing idempotent result', headers: [new OA\Header(header: 'Location', schema: new OA\Schema(type: 'string'))], content: new Model(type: ReservationResponse::class))]
+    #[OA\Response(response: 409, description: 'Insufficient inventory or conflicting reservation', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function create(
         Request $httpRequest,
         #[CurrentUser]
@@ -98,6 +121,11 @@ final class ReservationController extends AbstractController
      */
     #[Route('/{id}', name: 'reservation_cancel', methods: ['DELETE'])]
     #[IsGranted('ROLE_USER')]
+    #[OA\Delete(security: [['Bearer' => []]])]
+    #[OA\Response(response: 200, description: 'Cancelled reservation', content: new Model(type: ReservationResponse::class))]
+    #[OA\Response(response: 404, description: 'Reservation not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Cancellation conflict', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid reservation ID; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/HttpProblem'))]
     public function cancel(string $id): JsonResponse
     {
         $reservationId = $this->parseId($id);

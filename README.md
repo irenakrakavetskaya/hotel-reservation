@@ -66,12 +66,15 @@ After a deployment or changes to a Dockerfile or dependency manifest, rebuild:
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
-The one-shot `migrate` service waits for PostgreSQL, applies pending migrations
-and provisions the read-only report database role before the app and workers
-start. Each `up` runs the service again; Doctrine applies only new migrations.
-An error stops dependent services from starting. Existing running services are
-not stopped while migrations run, so deployments must use migrations compatible
-with the currently running application.
+The one-shot `migrate` service waits for PostgreSQL, synchronizes Composer
+dependencies into the persistent `backend_vendor` volume, clears Symfony's
+cache, applies pending migrations and provisions the read-only report database
+role before the app and workers start. This keeps existing vendor volumes in
+sync after dependency changes without deleting database volumes. Each `up` runs
+the service again; Doctrine applies only new migrations. An error stops
+dependent services from starting. Existing running services are not stopped
+while migrations run, so deployments must use migrations compatible with the
+currently running application.
 
 The application is available at:
 
@@ -217,6 +220,37 @@ git config core.hooksPath .githooks
 Bypass with `--no-verify` when necessary.
 
 ## API and Authentication
+
+### OpenAPI documentation
+
+Staff and administrators can open `/admin/api-doc` while signed in. Symfony
+verifies the session token and the current staff role before returning the
+documentation. The UI serves bundled assets and fetches its schema through an
+authorized same-origin proxy; direct backend access to
+`/v1/admin/api-doc/openapi.json` also requires a staff bearer token.
+Documentation responses are not cached.
+
+The Twig bundle is a runtime dependency, so the documentation UI is available
+in production installs as well as development. Its bundled Swagger UI assets
+are served in offline mode rather than loaded from a third-party CDN.
+
+Swagger's **Authorize** button accepts a separately obtained API bearer token.
+It does not use or expose the frontend's HttpOnly session cookie, and the token
+is not persisted by the UI. Interactive requests can make real changes; use
+test accounts and data when appropriate.
+
+After changing API controllers or DTOs, regenerate and check the committed
+specification and frontend types:
+
+```bash
+cd backend && composer openapi:dump && cd ../frontend && npm run gen:api
+```
+
+CI checks `composer openapi:check` and `npm run check:api`. The committed
+`openapi.json` is generated from backend metadata, so frontend type generation
+does not require a running backend. Route and contract tests supplement these
+checks; generated-file comparisons alone cannot prove the documentation matches
+runtime behavior.
 
 Authentication uses `POST /v1/auth/login` with `email` and `password`.
 Public registration is available through

@@ -9,6 +9,8 @@ use App\Domain\Hotel\Dto\RoomResponse;
 use App\Domain\Hotel\Service\RoomService;
 use App\Infrastructure\Cache\CacheScopes;
 use App\Infrastructure\Cache\ReadCacheVersionService;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,6 +26,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * Reads are public, writes are #[IsGranted('ROLE_STAFF')].
  */
 #[Route('/v1/hotels/{hotelId<\d+>}/rooms')]
+#[OA\Tag(name: 'Rooms')]
 final class RoomController extends AbstractController
 {
     private const CACHE_TTL_SECONDS = 300;
@@ -38,6 +41,9 @@ final class RoomController extends AbstractController
      * GET /v1/hotels/{hotelId}/rooms
      */
     #[Route('', name: 'room_list', methods: ['GET'])]
+    #[OA\Get(security: [])]
+    #[OA\Response(response: 200, description: 'Rooms', content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: new Model(type: RoomResponse::class))))]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function list(int $hotelId): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::roomRead($hotelId));
@@ -62,6 +68,9 @@ final class RoomController extends AbstractController
      * GET /v1/hotels/{hotelId}/rooms/{id}
      */
     #[Route('/{id<\d+>}', name: 'room_get', methods: ['GET'])]
+    #[OA\Get(security: [])]
+    #[OA\Response(response: 200, description: 'Room', content: new Model(type: RoomResponse::class))]
+    #[OA\Response(response: 404, description: 'Room not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function get(int $hotelId, int $id): JsonResponse
     {
         $scopeVersion = $this->cacheVersions->getVersion(CacheScopes::roomRead($hotelId));
@@ -86,6 +95,13 @@ final class RoomController extends AbstractController
      */
     #[Route('', name: 'room_create', methods: ['POST'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Post(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 201, description: 'Room created', headers: [new OA\Header(header: 'Location', schema: new OA\Schema(type: 'string'))], content: new Model(type: RoomResponse::class))]
+    #[OA\Response(response: 404, description: 'Hotel not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Duplicate room number or inventory conflict', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request or room type; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/InvalidRequest'))]
     public function create(int $hotelId, #[MapRequestPayload] RoomRequest $request): JsonResponse
     {
         $room = $this->roomService->createRoom($hotelId, $request);
@@ -103,6 +119,13 @@ final class RoomController extends AbstractController
      */
     #[Route('/{id<\d+>}', name: 'room_update', methods: ['PUT'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Put(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 200, description: 'Updated room', content: new Model(type: RoomResponse::class))]
+    #[OA\Response(response: 404, description: 'Room not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Duplicate room number or inventory conflict', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 422, description: 'Invalid request or room type; JSON problem details when requested', content: new OA\JsonContent(ref: '#/components/schemas/InvalidRequest'))]
     public function update(int $hotelId, int $id, #[MapRequestPayload] RoomRequest $request): JsonResponse
     {
         $room = $this->roomService->updateRoom($hotelId, $id, $request);
@@ -115,6 +138,12 @@ final class RoomController extends AbstractController
      */
     #[Route('/{id<\d+>}', name: 'room_delete', methods: ['DELETE'])]
     #[IsGranted('ROLE_STAFF')]
+    #[OA\Delete(security: [['Bearer' => []]])]
+    #[OA\Response(response: 401, description: 'Authentication required')]
+    #[OA\Response(response: 403, description: 'Staff access required')]
+    #[OA\Response(response: 204, description: 'Room deleted')]
+    #[OA\Response(response: 404, description: 'Room not found', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
+    #[OA\Response(response: 409, description: 'Inventory conflict', content: new OA\JsonContent(ref: '#/components/schemas/DomainError'))]
     public function delete(int $hotelId, int $id): JsonResponse
     {
         $this->roomService->deleteRoom($hotelId, $id);

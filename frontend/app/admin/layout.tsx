@@ -16,6 +16,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
         <Link href="/admin">Dashboard</Link>
         <Link href="/admin/hotels">Hotels</Link>
         <Link href="/admin/reports">Reports</Link>
+        <Link href="/admin/api-doc">API documentation</Link>
         {isAdmin(session) && <Link href="/admin/users">Users</Link>}
       </nav>
       {children}

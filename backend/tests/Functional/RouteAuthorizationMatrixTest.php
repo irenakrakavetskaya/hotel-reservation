@@ -51,6 +51,8 @@ final class RouteAuthorizationMatrixTest extends WebTestCase
         yield 'change user roles' => ['PUT', '/v1/admin/users/1/roles'];
         yield 'list reports' => ['GET', '/v1/admin/reports'];
         yield 'report realtime token' => ['GET', '/v1/admin/realtime/token'];
+        yield 'api documentation' => ['GET', '/v1/admin/api-doc'];
+        yield 'api documentation schema' => ['GET', '/v1/admin/api-doc/openapi.json'];
         yield 'get report' => ['GET', '/v1/admin/reports/' . self::UUID];
         yield 'create report' => ['POST', '/v1/admin/reports'];
         yield 'download report' => ['GET', '/v1/admin/reports/' . self::UUID . '/download'];

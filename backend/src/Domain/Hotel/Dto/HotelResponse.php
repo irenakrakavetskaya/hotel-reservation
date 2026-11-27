@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Hotel\Dto;
 
 use App\Domain\Hotel\Entity\Hotel;
+use OpenApi\Attributes as OA;
 
 /** Explicit API output shape — never serialize the Hotel entity directly. */
+#[OA\Schema(required: ['id', 'name', 'address', 'city', 'country', 'starRating', 'description', 'amenities', 'createdAt', 'updatedAt'])]
 final class HotelResponse
 {
     /** @param list<string> $amenities */

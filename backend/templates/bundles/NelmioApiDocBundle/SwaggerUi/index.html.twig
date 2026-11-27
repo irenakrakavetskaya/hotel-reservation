@@ -1,0 +1,34 @@
+{% extends '@!NelmioApiDoc/SwaggerUi/index.html.twig' %}
+
+{% block header %}{% endblock %}
+
+{% block swagger_initialization %}
+    <script>
+        window.onload = () => {
+            const data = JSON.parse(document.getElementById('swagger-data').textContent);
+            SwaggerUIBundle({
+                ...(window.location.pathname === '/admin/api-doc'
+                    ? {url: '/admin/api-doc/openapi.json'}
+                    : {spec: data.spec}),
+                dom_id: '#swagger-ui',
+                validatorUrl: null,
+                persistAuthorization: false,
+                requestInterceptor: request => {
+                    const requestUrl = new URL(request.url, window.location.href);
+                    const isApiRequest =
+                        requestUrl.pathname === '/v1' || requestUrl.pathname.startsWith('/v1/');
+                    const isDocumentationSchemaRequest =
+                        requestUrl.pathname === '/admin/api-doc/openapi.json';
+                    if (
+                        requestUrl.origin !== window.location.origin ||
+                        (!isApiRequest && !isDocumentationSchemaRequest)
+                    ) {
+                        throw new Error('Only the documentation schema and same-origin /v1 API requests are permitted.');
+                    }
+                    if (isApiRequest) request.credentials = 'omit';
+                    return request;
+                }
+            });
+        };
+    </script>
+{% endblock %}

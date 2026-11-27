@@ -68,6 +68,9 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
   Coverage: `composer test:coverage` (needs `pcov`, installed in `Dockerfile.backend`; run it in the
   container with the `*_test` DB command below). Frontend coverage: `npm run test:coverage`.
 - Backend lint and static analysis: from `backend/`, run `composer lint`.
+- OpenAPI: from `backend/`, run `composer openapi:dump` to regenerate the root
+  snapshot and `composer openapi:check` to verify it. From `frontend/`, run
+  `npm run gen:api` and `npm run check:api` for generated TypeScript types.
 - Report worker tests: from `report-worker/`, run `go test ./...`.
 - Full local stack: from `docker/`, run `docker compose up`.
 - Frontend checks, from `frontend/`: `npm run lint`, `npm run typecheck`, and

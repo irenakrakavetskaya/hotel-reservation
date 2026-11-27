@@ -1,0 +1,72 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: Hotel Reservation API
+            version: 1.0.0
+        servers:
+            - url: /
+        components:
+            securitySchemes:
+                Bearer:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+            schemas:
+                DomainError:
+                    type: object
+                    required: [error]
+                    properties:
+                        error: { type: string }
+                HttpProblem:
+                    type: object
+                    required: [type, title, status, detail]
+                    properties:
+                        type: { type: string }
+                        title: { type: string }
+                        status: { type: integer }
+                        detail: { type: string }
+                        violations:
+                            type: array
+                            items:
+                                type: object
+                                required: [propertyPath, title]
+                                properties:
+                                    propertyPath: { type: string }
+                                    title: { type: string }
+                InvalidRequest:
+                    oneOf:
+                        - { $ref: '#/components/schemas/HttpProblem' }
+                        - { $ref: '#/components/schemas/DomainError' }
+                Availability:
+                    type: object
+                    required: [hotelID, roomTypeID, startDate, endDate, roomCount, nights, canBook, totalPrice, minAvailableRooms, days]
+                    properties:
+                        hotelID: { type: integer }
+                        roomTypeID: { type: integer }
+                        startDate: { type: string, format: date }
+                        endDate: { type: string, format: date }
+                        roomCount: { type: integer }
+                        nights: { type: integer }
+                        canBook: { type: boolean }
+                        totalPrice: { type: integer, nullable: true, description: Price in minor units }
+                        minAvailableRooms: { type: integer }
+                        days:
+                            type: array
+                            items:
+                                type: object
+                                required: [date, totalInventory, totalReserved, availableRooms, price]
+                                properties:
+                                    date: { type: string, format: date }
+                                    totalInventory: { type: integer }
+                                    totalReserved: { type: integer }
+                                    availableRooms: { type: integer }
+                                    price: { type: integer, nullable: true, description: Price in minor units }
+    areas:
+        default:
+            path_patterns:
+                - '^/v1(?!/admin/api-doc(?:/|$))(?:/|$)'
+    html_config:
+        assets_mode: offline
+        swagger_ui_config:
+            persistAuthorization: false
+            validatorUrl: null

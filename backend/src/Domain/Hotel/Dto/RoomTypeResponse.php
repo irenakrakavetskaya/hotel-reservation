@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Hotel\Dto;
 
 use App\Domain\Hotel\Entity\RoomType;
+use OpenApi\Attributes as OA;
 
 /** Explicit API output shape — never serialize RoomType entity directly. */
+#[OA\Schema(required: ['id', 'hotelId', 'name', 'description', 'maxOccupancy', 'basePrice', 'amenities', 'createdAt', 'updatedAt'])]
 final class RoomTypeResponse
 {
     /**
