@@ -71,6 +71,8 @@ A multi-hotel chain reservation platform: customers browse hotels/rooms, book ro
 - OpenAPI: from `backend/`, run `composer openapi:dump` to regenerate the root
   snapshot and `composer openapi:check` to verify it. From `frontend/`, run
   `npm run gen:api` and `npm run check:api` for generated TypeScript types.
+  View the docs at `http://localhost:8090/admin/api-doc` (staff/admin login; Swagger **Authorize**
+  needs a JWT from `POST /v1/auth/login`, pasted without the `Bearer ` prefix).
 - Report worker tests: from `report-worker/`, run `go test ./...`.
 - Full local stack: from `docker/`, run `docker compose up`.
 - Frontend checks, from `frontend/`: `npm run lint`, `npm run typecheck`, and

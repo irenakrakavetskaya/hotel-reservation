@@ -18,6 +18,7 @@ Use this checklist for every new `/v1/...` endpoint in the Symfony backend. It e
 7. **Error mapping**: map domain exceptions to HTTP status codes explicitly (404 not found, 409 conflict for inventory/idempotency conflicts, 422 for validation, 403 for authorization) via an exception listener or per-controller catch — don't let framework default error pages leak through for expected error cases.
 8. **Test**: add a `WebTestCase` functional test hitting the real route, covering the happy path, one authorization-denied case, and one validation-failure case.
 9. **Update the plan doc** (`docs/IMPLEMENTATION_PLAN.md` §2 API surface) if this endpoint wasn't already listed there, so the doc stays the source of truth.
+10. **OpenAPI**: add `#[OA\...]` attributes (summary, request body, responses incl. 401/403/409/422). Public routes need `security: []`. Then run `composer openapi:dump`, `composer openapi:check`, and `npm run gen:api` in `frontend/`; commit `openapi.json` and `frontend/lib/openapi.d.ts`. Extend `ApiDocumentationTest` expectations if the operation count changes.
 
 ## When NOT to use this skill
 
